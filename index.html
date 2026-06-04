@@ -20,6 +20,12 @@
     --today-line: #e6b366;
     --selected: #e7f3f0;
     --danger: #b4452f;
+    --green: #1f9d57;
+    --green-soft: #e8f6ed;
+    --green-ink: #15663a;
+    --green-line: #bfe6cd;
+    --red: #c23b22;
+    --red-soft: #fbecea;
     --radius: 8px;
     --shadow: 0 1px 2px rgba(20,40,38,.06), 0 6px 20px rgba(20,40,38,.07);
     --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -126,6 +132,8 @@
     border-left: 3px solid var(--accent);
   }
   .chip .t { color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-right: 4px; }
+  .chip.chip-complete { background: var(--green-soft); color: var(--ink-soft); }
+  .chip.chip-critical { background: var(--red-soft); color: var(--ink); font-weight: 600; }
   .more { font-size: 11px; color: var(--ink-faint); padding-left: 2px; }
 
   .daypanel { border-top: 2px solid var(--line-strong); background: var(--panel); }
@@ -162,8 +170,36 @@
   .tag.cat { color: #fff; }
   .tag.asg::before { content: "@"; opacity: .6; margin-right: 1px; }
   .tag.pri { border: 1px solid var(--line-strong); background: #fff; }
-  .compactrow { padding: 6px 8px; border-radius: 6px; }
+  .compactrow { padding: 6px 8px; border-radius: 6px; flex-wrap: wrap; }
   .compactrow .title { font-size: 12px; }
+
+  .row.complete { background: var(--green-soft); }
+  .row.complete .title.done { color: var(--ink-soft); }
+  .row.critical { background: var(--red-soft); }
+
+  /* Status control */
+  .statuswrap { position: relative; flex: none; margin-left: auto; }
+  .statuspill {
+    border: 1px solid var(--line-strong); background: #fff; border-radius: 20px;
+    padding: 3px 11px; font: inherit; font-size: 11px; cursor: pointer; color: var(--ink-soft); white-space: nowrap;
+  }
+  .statuspill:hover { background: #eef1ef; }
+  .statuspill.is-complete { background: var(--green-soft); border-color: var(--green-line); color: var(--green-ink); }
+  .statuspill .pcaret { color: var(--ink-faint); font-size: 9px; margin-left: 4px; }
+  .statusmenu {
+    position: absolute; top: calc(100% + 4px); right: 0; z-index: 60; background: #fff;
+    border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: var(--shadow); min-width: 150px; padding: 4px;
+  }
+  .statusitem {
+    display: block; width: 100%; text-align: left; border: 0; background: transparent;
+    padding: 6px 10px; border-radius: 6px; font: inherit; cursor: pointer; color: var(--ink);
+  }
+  .statusitem:hover { background: #f3f5f3; }
+  .statusitem.current { font-weight: 600; color: var(--accent); }
+  .statusitem.clear { color: var(--ink-faint); border-top: 1px solid var(--line); margin-top: 4px; }
+
+  .lg { margin-left: 12px; color: var(--ink-faint); white-space: nowrap; }
+  .lg i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
 
   .empty { color: var(--ink-faint); padding: 14px; font-style: italic; }
 
@@ -196,7 +232,8 @@ const state = {
   haveGrist: typeof grist !== "undefined" && grist && grist.ready,
   records: [],          // parsed + scheduled deadlines
   unscheduled: 0,       // records with missing/invalid due dates
-  mapped: { due: false, title: false, category: false, assignedTo: false, priority: false },
+  mapped: { due: false, title: false, category: false, assignedTo: false, priority: false, status: false },
+  statusColId: null,    // real column id of the Status column (for write-back)
   view: "month",        // 'day' | 'week' | 'month'
   focus: stripTime(today),
   selectedKey: dayKeyFromDate(today),
@@ -204,8 +241,13 @@ const state = {
   sortDir: "asc",       // asc = High -> Low
   hiddenCats: new Set(),
   hiddenAsgs: new Set(),
-  openPopover: null,    // 'cat' | 'asg' | 'sort' | null
+  redCats: new Set(),   // categories flagged critical (red)
+  redCatsInit: false,   // whether redCats has been seeded/loaded
+  openPopover: null,    // 'cat' | 'asg' | 'sort' | 'flags' | null
+  openStatusRow: null,  // rowId whose status menu is open
 };
+
+const COMPLETE_WORDS = new Set(["complete","completed","done","closed","resolved","finished"]);
 
 const NO_CAT = "(No category)";
 const UNASSIGNED = "(Unassigned)";
@@ -288,6 +330,35 @@ function esc(s) {
 function recCats(r) { const l = toList(r.category); return l.length ? l : [NO_CAT]; }
 function recAsgs(r) { const l = toList(r.assignedTo); return l.length ? l : [UNASSIGNED]; }
 
+/* ----- Status / criticality classification ----- */
+function isComplete(r) {
+  if (!state.mapped.status) return false;
+  const s = r.status;
+  if (s === null || s === undefined) return false;
+  return COMPLETE_WORDS.has(String(s).trim().toLowerCase());
+}
+function isImportant(v) {
+  if (v === null || v === undefined || v === "") return false;
+  return priorityRank(v).num <= 1; // highest/critical/urgent/high/important/p0/p1 or numeric <=1
+}
+function isCritical(r) {
+  if (state.mapped.priority && isImportant(r.priority)) return true;
+  if (state.mapped.category && recCats(r).some(c => state.redCats.has(c))) return true;
+  return false;
+}
+// 'complete' (green) wins over 'critical' (red), else 'normal'
+function classify(r) {
+  if (isComplete(r)) return "complete";
+  if (isCritical(r)) return "critical";
+  return "normal";
+}
+function stripeColor(r, kind) {
+  if (kind === "complete") return "var(--green)";
+  if (kind === "critical") return "var(--red)";
+  const cats = recCats(r);
+  return (state.mapped.category && cats[0] !== NO_CAT) ? catColor(cats[0]) : "var(--accent)";
+}
+
 function isVisible(r) {
   if (state.mapped.category) {
     const cats = recCats(r);
@@ -328,7 +399,7 @@ function render() {
     document.getElementById("toolbar").style.display = "none";
     document.getElementById("meta").style.display = "none";
     document.getElementById("body").innerHTML =
-      '<div class="notice"><h2>Open this inside Grist</h2><p>This page is a Grist custom widget. Add it to a Grist document via <b>Add Widget &rarr; Custom</b>, paste this page&rsquo;s URL, grant <b>Read table</b> access, then map the columns in the creator panel.</p></div>';
+      '<div class="notice"><h2>Open this inside Grist</h2><p>This page is a Grist custom widget. Add it to a Grist document via <b>Add Widget &rarr; Custom</b>, paste this page&rsquo;s URL, grant <b>Full</b> (read &amp; write) access, then map the columns in the creator panel.</p></div>';
     return;
   }
   renderToolbar();
@@ -340,7 +411,7 @@ function render() {
       '<div class="notice"><h2>Map your columns</h2><p>In the creator panel on the right, set the widget&rsquo;s column mappings:</p>'
       + '<ol><li><b>Due Date</b> &mdash; a Date or DateTime column (required)</li>'
       + '<li><b>Calendar Title</b> &mdash; the text shown for each deadline (required)</li>'
-      + '<li><b>Category</b>, <b>Assigned To</b>, <b>Priority</b> &mdash; optional</li></ol></div>';
+      + '<li><b>Status</b>, <b>Category</b>, <b>Assigned To</b>, <b>Priority</b> &mdash; optional</li></ol></div>';
     return;
   }
 
@@ -356,6 +427,8 @@ function renderMeta() {
   const hiddenByFilter = state.records.length - visible;
   if (hiddenByFilter > 0) txt += " &middot; " + hiddenByFilter + " hidden by filters";
   if (state.unscheduled > 0) txt += " &middot; <b>" + state.unscheduled + "</b> with no valid due date (not shown)";
+  if (state.mapped.status) txt += '<span class="lg"><i style="background:var(--green)"></i>complete</span>';
+  if (state.mapped.priority || state.mapped.category) txt += '<span class="lg"><i style="background:var(--red)"></i>critical</span>';
   document.getElementById("meta").innerHTML = txt;
 }
 
@@ -392,6 +465,7 @@ function renderToolbar() {
   if (state.mapped.category) tb.appendChild(filterDropdown("cat", "Categories", state.hiddenCats, recCats));
   if (state.mapped.assignedTo) tb.appendChild(filterDropdown("asg", "Assigned", state.hiddenAsgs, recAsgs));
   tb.appendChild(sortDropdown());
+  if (state.mapped.category) tb.appendChild(flagsDropdown());
 }
 
 function shift(dir) {
@@ -485,19 +559,52 @@ function sortDropdown() {
   return wrap;
 }
 
+function flagsDropdown() {
+  const wrap = el("div", "dropwrap");
+  const btn = el("button", "dropbtn");
+  btn.innerHTML = "\u2691 Flags" + (state.redCats.size ? ' <span class="dot">' + state.redCats.size + "</span>" : "") + ' <span class="caret">&#9662;</span>';
+  btn.onclick = (e) => { e.stopPropagation(); state.openPopover = state.openPopover === "flags" ? null : "flags"; render(); };
+  wrap.appendChild(btn);
+
+  if (state.openPopover === "flags") {
+    const pop = el("div", "popover");
+    pop.onclick = (e) => e.stopPropagation();
+    pop.appendChild(Object.assign(el("h4"), { textContent: "Highlight red (critical categories)" }));
+    const list = el("div", "poplist");
+    const cats = distinctValues(recCats).filter(c => c !== NO_CAT);
+    if (!cats.length) list.appendChild(Object.assign(el("div", "empty"), { textContent: "No categories found yet." }));
+    cats.forEach(c => {
+      const r = el("label", "poprow");
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = state.redCats.has(c);
+      cb.onchange = () => { if (cb.checked) state.redCats.add(c); else state.redCats.delete(c); persist(); render(); };
+      const sw = el("span", "swatch"); sw.style.background = catColor(c);
+      r.append(cb, sw, Object.assign(el("span", "label"), { textContent: c }));
+      list.appendChild(r);
+    });
+    pop.appendChild(list);
+    const hint = el("div"); hint.style.cssText = "font-size:11px;color:var(--ink-faint);padding:6px;border-top:1px solid var(--line);margin-top:4px;";
+    hint.textContent = "High / important priority deadlines are always red. Completed deadlines are always green.";
+    pop.appendChild(hint);
+    wrap.appendChild(pop);
+  }
+  return wrap;
+}
+
 /* ---- Deadline row ---- */
 function rowEl(r, compact) {
-  const row = el("div", "row" + (compact ? " compactrow" : ""));
+  const kind = classify(r);
+  const row = el("div", "row " + kind + (compact ? " compactrow" : ""));
   const cats = recCats(r);
-  const stripe = (state.mapped.category && cats[0] !== NO_CAT) ? catColor(cats[0]) : "var(--accent)";
-  row.style.borderLeftColor = stripe;
+  row.style.borderLeftColor = stripeColor(r, kind);
 
   const time = el("div", "time" + (r.due.timeStr ? "" : " none"));
   time.textContent = r.due.timeStr || "All day";
   row.appendChild(time);
 
   const main = el("div", "main");
-  main.appendChild(Object.assign(el("div", "title"), { textContent: r.title || "(untitled)" }));
+  const title = el("div", "title" + (kind === "complete" ? " done" : ""));
+  title.textContent = (kind === "complete" ? "\u2713 " : "") + (r.title || "(untitled)");
+  main.appendChild(title);
 
   const tags = el("div", "tags");
   if (state.mapped.category) cats.forEach(c => {
@@ -514,8 +621,50 @@ function rowEl(r, compact) {
   if (tags.children.length) main.appendChild(tags);
   row.appendChild(main);
 
+  if (state.mapped.status) row.appendChild(statusControl(r, kind));
+
   row.onclick = () => selectInGrist(r.id);
   return row;
+}
+
+// Clickable status pill with a dropdown that writes the chosen status back to Grist.
+function statusControl(r, kind) {
+  const wrap = el("div", "statuswrap");
+  const has = r.status !== null && r.status !== undefined && String(r.status).trim() !== "";
+  const pill = el("button", "statuspill" + (kind === "complete" ? " is-complete" : ""));
+  pill.innerHTML = esc(has ? String(r.status) : "Set status") + ' <span class="pcaret">&#9662;</span>';
+  pill.onclick = (e) => { e.stopPropagation(); state.openStatusRow = state.openStatusRow === r.id ? null : r.id; render(); };
+  wrap.appendChild(pill);
+
+  if (state.openStatusRow === r.id) {
+    const menu = el("div", "statusmenu");
+    menu.onclick = (e) => e.stopPropagation();
+    const opts = statusOptions();
+    if (!opts.length) menu.appendChild(Object.assign(el("div", "empty"), { textContent: "No status values yet." }));
+    opts.forEach(s => {
+      const item = el("button", "statusitem" + (String(r.status) === s ? " current" : ""));
+      item.textContent = s;
+      item.onclick = () => { state.openStatusRow = null; setStatus(r.id, s); render(); };
+      menu.appendChild(item);
+    });
+    if (has) {
+      const clr = el("button", "statusitem clear"); clr.textContent = "Clear status";
+      clr.onclick = () => { state.openStatusRow = null; setStatus(r.id, null); render(); };
+      menu.appendChild(clr);
+    }
+    wrap.appendChild(menu);
+  }
+  return wrap;
+}
+
+// Distinct status values currently present in the table (used to populate the menu).
+function statusOptions() {
+  const set = new Set();
+  for (const r of state.records) {
+    const s = r.status;
+    if (s !== null && s !== undefined && String(s).trim() !== "") set.add(String(s));
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
 
 function dayListEl(key, compact) {
@@ -549,11 +698,12 @@ function renderMonth() {
     const recs = recordsForKey(key);
     const shown = recs.slice(0, 3);
     shown.forEach(r => {
-      const chip = el("div", "chip");
-      const cats = recCats(r);
-      if (state.mapped.category && cats[0] !== NO_CAT) chip.style.borderLeftColor = catColor(cats[0]);
+      const kind = classify(r);
+      const chip = el("div", "chip" + (kind !== "normal" ? " chip-" + kind : ""));
+      chip.style.borderLeftColor = stripeColor(r, kind);
       const tt = r.due.timeStr ? '<span class="t">' + esc(r.due.timeStr) + "</span>" : "";
-      chip.innerHTML = tt + esc(r.title || "(untitled)");
+      const pre = kind === "complete" ? "\u2713 " : "";
+      chip.innerHTML = tt + esc(pre + (r.title || "(untitled)"));
       cell.appendChild(chip);
     });
     if (recs.length > shown.length) cell.appendChild(Object.assign(el("div", "more"), { textContent: "+" + (recs.length - shown.length) + " more" }));
@@ -606,11 +756,33 @@ function renderDay() {
 function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
 function parseKeyToDate(key) { const [y, m, d] = key.split("-").map(Number); return new Date(y, m, d); }
 
-document.addEventListener("click", () => { if (state.openPopover) { state.openPopover = null; render(); } });
+document.addEventListener("click", () => {
+  let changed = false;
+  if (state.openPopover) { state.openPopover = null; changed = true; }
+  if (state.openStatusRow !== null) { state.openStatusRow = null; changed = true; }
+  if (changed) render();
+});
 
 /* ===================== Grist wiring ===================== */
 function selectInGrist(rowId) {
   try { grist.setCursorPos({ rowId }); } catch (e) { /* linked-cursor optional */ }
+}
+
+// Write a new status value back to the source table, directly from the calendar.
+async function setStatus(rowId, value) {
+  if (!state.mapped.status || !state.statusColId) return;
+  const fields = {}; fields[state.statusColId] = value;
+  try {
+    await grist.selectedTable.update({ id: rowId, fields: fields });
+  } catch (e) {
+    try {
+      const tid = await grist.selectedTable.getTableId();
+      await grist.docApi.applyUserActions([["UpdateRecord", tid, rowId, fields]]);
+    } catch (e2) {
+      console.error("status update failed", e2);
+      alert("Could not update status. The widget needs full (read \u0026 write) access \u2014 check the widget's access setting in the creator panel.");
+    }
+  }
 }
 
 function persist() {
@@ -622,6 +794,7 @@ function persist() {
       sortDir: state.sortDir,
       hiddenCats: Array.from(state.hiddenCats),
       hiddenAsgs: Array.from(state.hiddenAsgs),
+      redCats: Array.from(state.redCats),
     });
   } catch (e) {}
 }
@@ -643,7 +816,9 @@ function ingest(records, mappings) {
     category: !!mappings.Category,
     assignedTo: !!mappings.AssignedTo,
     priority: !!mappings.Priority,
+    status: !!mappings.Status,
   };
+  state.statusColId = mappings.Status || null;
   const out = [];
   let unscheduled = 0;
   for (const rec of (records || [])) {
@@ -657,21 +832,40 @@ function ingest(records, mappings) {
       category: state.mapped.category ? pick(rec, mappings, "Category") : null,
       assignedTo: state.mapped.assignedTo ? pick(rec, mappings, "AssignedTo") : null,
       priority: state.mapped.priority ? pick(rec, mappings, "Priority") : null,
+      status: state.mapped.status ? pick(rec, mappings, "Status") : null,
     });
   }
   state.records = out;
   state.unscheduled = unscheduled;
+  seedRedCatsIfNeeded();
+}
+
+// On first run, auto-flag SOL / Trial / statute-type categories as critical (red).
+// Only runs until the user's choice is loaded or set; respects any saved selection.
+function seedRedCatsIfNeeded() {
+  if (state.redCatsInit || !state.mapped.category) return;
+  const cats = distinctValues(recCats).filter(c => c !== NO_CAT);
+  if (!cats.length) return; // wait until categories are known
+  cats.forEach(c => {
+    const s = c.toLowerCase();
+    if (s.includes("sol") || s.includes("trial") || s.includes("statute") || s.includes("limitation")) {
+      state.redCats.add(c);
+    }
+  });
+  state.redCatsInit = true;
+  persist();
 }
 
 if (state.haveGrist) {
   grist.ready({
-    requiredAccess: "read table",
+    requiredAccess: "full",
     columns: [
       { name: "DueDate", title: "Due Date", type: "Date,DateTime", description: "Date or DateTime that places the deadline on the calendar." },
       { name: "Title", title: "Calendar Title", type: "Any", description: "Text shown for each deadline." },
-      { name: "Category", title: "Category", type: "Choice,ChoiceList,Text", optional: true, description: "Used for coloring and the Categories filter." },
+      { name: "Status", title: "Status", type: "Choice,Text", optional: true, description: "e.g. Complete / Incomplete / Ready. Editable from the calendar; Complete/Done/Closed turn the deadline green." },
+      { name: "Category", title: "Category", type: "Choice,ChoiceList,Text", optional: true, description: "Used for coloring, the Categories filter, and the critical (red) Flags list." },
       { name: "AssignedTo", title: "Assigned To", type: "Choice,ChoiceList,Text", optional: true, description: "One or more team members; powers the Assigned filter." },
-      { name: "Priority", title: "Priority", type: "Any", optional: true, description: "Number or choice (e.g. High/Medium/Low) used for optional priority sorting." },
+      { name: "Priority", title: "Priority", type: "Any", optional: true, description: "Number or choice (e.g. High/Medium/Low). High/important values turn the deadline red; also used for optional priority sorting." },
     ],
   });
 
@@ -682,6 +876,7 @@ if (state.haveGrist) {
     if (opts.sortDir) state.sortDir = opts.sortDir;
     if (Array.isArray(opts.hiddenCats)) state.hiddenCats = new Set(opts.hiddenCats);
     if (Array.isArray(opts.hiddenAsgs)) state.hiddenAsgs = new Set(opts.hiddenAsgs);
+    if (Array.isArray(opts.redCats)) { state.redCats = new Set(opts.redCats); state.redCatsInit = true; }
     render();
   });
 
