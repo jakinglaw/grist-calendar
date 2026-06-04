@@ -22,6 +22,7 @@
     --danger: #b4452f;
     --green: #1f9d57;
     --green-soft: #e8f6ed;
+    --green-mid: #c4e7d1;
     --green-ink: #15663a;
     --green-line: #bfe6cd;
     --red: #c23b22;
@@ -120,8 +121,8 @@
     padding: 5px 6px; min-height: 96px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; overflow: hidden;
   }
   .cell:nth-child(7n) { border-right: 0; }
-  .cell.outside { background: #fafbfa; }
-  .cell.outside .daynum { color: var(--line-strong); }
+  .cell.outside { background: #e9ebe8; }
+  .cell.outside .daynum { color: var(--ink-faint); }
   .cell.today { background: var(--today); box-shadow: inset 0 0 0 1px var(--today-line); }
   .cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--accent); }
   .cell:hover { background: #f1f5f3; }
@@ -132,7 +133,7 @@
     border-left: 3px solid var(--accent);
   }
   .chip .t { color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-right: 4px; }
-  .chip.chip-complete { background: var(--green-soft); color: var(--ink-soft); }
+  .chip.chip-complete { background: var(--green-mid); color: var(--green-ink); }
   .chip.chip-critical { background: var(--red-soft); color: var(--ink); font-weight: 600; }
   .more { font-size: 11px; color: var(--ink-faint); padding-left: 2px; }
 
@@ -163,20 +164,27 @@
   .row:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
   .row .duewrap { position: relative; flex: none; }
   .row .time {
-    font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 12px; min-width: 58px; padding: 1px 2px 0 0;
+    font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 12px; min-width: 64px; padding: 1px 3px 0 0;
     border: 0; background: transparent; font-family: inherit; text-align: left; cursor: pointer; border-radius: 5px;
+    text-decoration: underline dotted; text-decoration-color: var(--line-strong); text-underline-offset: 2px;
   }
   .row .time.none { color: var(--ink-faint); }
-  .row .time.editable:hover { color: var(--accent); text-decoration: underline dotted; text-underline-offset: 2px; }
-  .row .time .pen { opacity: 0; font-size: 10px; margin-left: 3px; }
-  .row .time.editable:hover .pen { opacity: .7; }
+  .row .time.editable:hover { color: var(--accent); text-decoration-color: var(--accent); }
+  .row .time .pen { font-size: 10px; margin-left: 3px; opacity: .45; }
+  .row .time.editable:hover .pen { opacity: .9; }
 
   .dateeditor {
     position: absolute; top: calc(100% + 4px); left: 0; z-index: 60; background: #fff;
     border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: var(--shadow);
-    padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 180px;
+    padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 190px;
   }
   .dateeditor input { font: inherit; padding: 5px 6px; border: 1px solid var(--line-strong); border-radius: 6px; }
+  .de-shortcuts { display: flex; flex-wrap: wrap; gap: 5px; }
+  .de-shortcuts button {
+    border: 1px solid var(--line-strong); background: #f6f8f6; border-radius: 20px;
+    padding: 3px 10px; font: inherit; font-size: 11px; cursor: pointer; color: var(--ink-soft);
+  }
+  .de-shortcuts button:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
   .de-actions { display: flex; gap: 6px; }
   .de-actions button { flex: 1; border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px; cursor: pointer; font: inherit; }
   .de-save { background: var(--accent); color: #fff; border-color: var(--accent) !important; }
@@ -194,8 +202,8 @@
   .compactrow { padding: 6px 8px; border-radius: 6px; flex-wrap: wrap; }
   .compactrow .title { font-size: 12px; }
 
-  .row.complete { background: var(--green-soft); }
-  .row.complete .title.done { color: var(--ink-soft); }
+  .row.complete { background: var(--green-mid); }
+  .row.complete .title.done { color: var(--green-ink); }
   .row.critical { background: var(--red-soft); }
 
   /* Status control */
@@ -705,13 +713,26 @@ function statusOptions() {
 
 function pad2(n) { return String(n).padStart(2, "0"); }
 function pad4(n) { return String(n).padStart(4, "0"); }
+function fmtShortDate(due) {
+  let s = MONTHS[due.mo].slice(0, 3) + " " + due.d;
+  if (due.y !== (new Date()).getFullYear()) s += ", " + due.y;
+  return s;
+}
+// Add N days to the date currently in the picker (so offsets stack and build on the deadline's date).
+function shiftDateInput(input, n) {
+  const base = input.value ? input.value.split("-").map(Number) : null;
+  const d = base ? new Date(base[0], base[1] - 1, base[2]) : stripTime(new Date());
+  d.setDate(d.getDate() + n);
+  input.value = pad4(d.getFullYear()) + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+}
 
 // Clickable due time/date that opens an inline editor writing the new date back to Grist.
 function dueCell(r) {
   const wrap = el("div", "duewrap");
-  const btn = el("button", "time editable" + (r.due.timeStr ? "" : " none"));
+  const btn = el("button", "time editable");
   btn.title = "Click to change the due date";
-  btn.innerHTML = esc(r.due.timeStr || "All day") + ' <span class="pen">\u270E</span>';
+  const label = r.due.timeStr ? r.due.timeStr : fmtShortDate(r.due);
+  btn.innerHTML = esc(label) + ' <span class="pen">\u270E</span>';
   btn.onclick = (e) => {
     e.stopPropagation();
     state.openStatusRow = null;
@@ -740,6 +761,15 @@ function dateEditor(r) {
     timeIn.value = pad2(Math.floor(mod / 60)) + ":" + pad2(mod % 60);
     ed.appendChild(timeIn);
   }
+
+  // Relative offsets, applied to whatever date is currently in the picker (composable).
+  const sc = el("div", "de-shortcuts");
+  [["+1d", 1, "Next day"], ["+7d", 7, "In 7 days"], ["+14d", 14, "In 14 days"], ["+30d", 30, "In 30 days"]].forEach(([lbl, n, tip]) => {
+    const b = el("button"); b.textContent = lbl; b.title = tip;
+    b.onclick = () => shiftDateInput(dateIn, n);
+    sc.appendChild(b);
+  });
+  ed.appendChild(sc);
 
   const acts = el("div", "de-actions");
   const save = el("button", "de-save"); save.textContent = "Save";
