@@ -161,8 +161,29 @@
     border-left-width: 4px;
   }
   .row:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
-  .row .time { font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 12px; min-width: 58px; padding-top: 1px; }
+  .row .duewrap { position: relative; flex: none; }
+  .row .time {
+    font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 12px; min-width: 58px; padding: 1px 2px 0 0;
+    border: 0; background: transparent; font-family: inherit; text-align: left; cursor: pointer; border-radius: 5px;
+  }
   .row .time.none { color: var(--ink-faint); }
+  .row .time.editable:hover { color: var(--accent); text-decoration: underline dotted; text-underline-offset: 2px; }
+  .row .time .pen { opacity: 0; font-size: 10px; margin-left: 3px; }
+  .row .time.editable:hover .pen { opacity: .7; }
+
+  .dateeditor {
+    position: absolute; top: calc(100% + 4px); left: 0; z-index: 60; background: #fff;
+    border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: var(--shadow);
+    padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 180px;
+  }
+  .dateeditor input { font: inherit; padding: 5px 6px; border: 1px solid var(--line-strong); border-radius: 6px; }
+  .de-actions { display: flex; gap: 6px; }
+  .de-actions button { flex: 1; border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px; cursor: pointer; font: inherit; }
+  .de-save { background: var(--accent); color: #fff; border-color: var(--accent) !important; }
+  .de-save:hover { filter: brightness(1.05); }
+  .de-cancel { background: #fff; color: var(--ink-soft); }
+  .de-cancel:hover { background: #eef1ef; }
+
   .row .main { flex: 1; min-width: 0; }
   .row .title { font-weight: 600; font-size: 13px; word-break: break-word; }
   .row .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
@@ -234,6 +255,10 @@ const state = {
   unscheduled: 0,       // records with missing/invalid due dates
   mapped: { due: false, title: false, category: false, assignedTo: false, priority: false, status: false },
   statusColId: null,    // real column id of the Status column (for write-back)
+  dueColId: null,       // real column id of the Due Date column (for write-back)
+  dueIsDateTime: false, // whether the due column carries a time component
+  dueTypeFromMeta: null,// resolved column type from metadata (null until known)
+  dueTypeChecked: false,
   view: "month",        // 'day' | 'week' | 'month'
   focus: stripTime(today),
   selectedKey: dayKeyFromDate(today),
@@ -241,13 +266,16 @@ const state = {
   sortDir: "asc",       // asc = High -> Low
   hiddenCats: new Set(),
   hiddenAsgs: new Set(),
+  hiddenStatuses: new Set(),
   redCats: new Set(),   // categories flagged critical (red)
   redCatsInit: false,   // whether redCats has been seeded/loaded
-  openPopover: null,    // 'cat' | 'asg' | 'sort' | 'flags' | null
+  openPopover: null,    // 'cat' | 'asg' | 'status' | 'sort' | 'flags' | null
   openStatusRow: null,  // rowId whose status menu is open
+  openDateRow: null,    // rowId whose due-date editor is open
 };
 
 const COMPLETE_WORDS = new Set(["complete","completed","done","closed","resolved","finished"]);
+const NO_STATUS = "(No status)";
 
 const NO_CAT = "(No category)";
 const UNASSIGNED = "(Unassigned)";
@@ -281,11 +309,11 @@ function parseDue(v) {
     const h = d.getHours(), m = d.getMinutes();
     return {
       y: d.getFullYear(), mo: d.getMonth(), d: d.getDate(),
-      minuteOfDay: h * 60 + m,
+      minuteOfDay: h * 60 + m, timed: true,
       timeStr: (h === 0 && m === 0) ? null : fmtTime(h, m),
     };
   }
-  return { y: d.getUTCFullYear(), mo: d.getUTCMonth(), d: d.getUTCDate(), minuteOfDay: -1, timeStr: null };
+  return { y: d.getUTCFullYear(), mo: d.getUTCMonth(), d: d.getUTCDate(), minuteOfDay: -1, timed: false, timeStr: null };
 }
 
 /* ===================== Value helpers ===================== */
@@ -329,6 +357,11 @@ function esc(s) {
 /* ===================== Filtering / sorting ===================== */
 function recCats(r) { const l = toList(r.category); return l.length ? l : [NO_CAT]; }
 function recAsgs(r) { const l = toList(r.assignedTo); return l.length ? l : [UNASSIGNED]; }
+function recStatus(r) {
+  const s = r.status;
+  if (s === null || s === undefined || String(s).trim() === "") return [NO_STATUS];
+  return [String(s)];
+}
 
 /* ----- Status / criticality classification ----- */
 function isComplete(r) {
@@ -367,6 +400,10 @@ function isVisible(r) {
   if (state.mapped.assignedTo) {
     const asgs = recAsgs(r);
     if (!asgs.some(a => !state.hiddenAsgs.has(a))) return false;
+  }
+  if (state.mapped.status) {
+    const ss = recStatus(r);
+    if (!ss.some(s => !state.hiddenStatuses.has(s))) return false;
   }
   return true;
 }
@@ -464,6 +501,7 @@ function renderToolbar() {
 
   if (state.mapped.category) tb.appendChild(filterDropdown("cat", "Categories", state.hiddenCats, recCats));
   if (state.mapped.assignedTo) tb.appendChild(filterDropdown("asg", "Assigned", state.hiddenAsgs, recAsgs));
+  if (state.mapped.status) tb.appendChild(filterDropdown("status", "Status", state.hiddenStatuses, recStatus));
   tb.appendChild(sortDropdown());
   if (state.mapped.category) tb.appendChild(flagsDropdown());
 }
@@ -597,9 +635,7 @@ function rowEl(r, compact) {
   const cats = recCats(r);
   row.style.borderLeftColor = stripeColor(r, kind);
 
-  const time = el("div", "time" + (r.due.timeStr ? "" : " none"));
-  time.textContent = r.due.timeStr || "All day";
-  row.appendChild(time);
+  row.appendChild(dueCell(r));
 
   const main = el("div", "main");
   const title = el("div", "title" + (kind === "complete" ? " done" : ""));
@@ -633,7 +669,7 @@ function statusControl(r, kind) {
   const has = r.status !== null && r.status !== undefined && String(r.status).trim() !== "";
   const pill = el("button", "statuspill" + (kind === "complete" ? " is-complete" : ""));
   pill.innerHTML = esc(has ? String(r.status) : "Set status") + ' <span class="pcaret">&#9662;</span>';
-  pill.onclick = (e) => { e.stopPropagation(); state.openStatusRow = state.openStatusRow === r.id ? null : r.id; render(); };
+  pill.onclick = (e) => { e.stopPropagation(); state.openDateRow = null; state.openStatusRow = state.openStatusRow === r.id ? null : r.id; render(); };
   wrap.appendChild(pill);
 
   if (state.openStatusRow === r.id) {
@@ -665,6 +701,69 @@ function statusOptions() {
     if (s !== null && s !== undefined && String(s).trim() !== "") set.add(String(s));
   }
   return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
+function pad2(n) { return String(n).padStart(2, "0"); }
+function pad4(n) { return String(n).padStart(4, "0"); }
+
+// Clickable due time/date that opens an inline editor writing the new date back to Grist.
+function dueCell(r) {
+  const wrap = el("div", "duewrap");
+  const btn = el("button", "time editable" + (r.due.timeStr ? "" : " none"));
+  btn.title = "Click to change the due date";
+  btn.innerHTML = esc(r.due.timeStr || "All day") + ' <span class="pen">\u270E</span>';
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    state.openStatusRow = null;
+    state.openDateRow = state.openDateRow === r.id ? null : r.id;
+    render();
+  };
+  wrap.appendChild(btn);
+  if (state.openDateRow === r.id) wrap.appendChild(dateEditor(r));
+  return wrap;
+}
+
+function dateEditor(r) {
+  const ed = el("div", "dateeditor");
+  ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+
+  const dateIn = document.createElement("input");
+  dateIn.type = "date";
+  dateIn.value = pad4(r.due.y) + "-" + pad2(r.due.mo + 1) + "-" + pad2(r.due.d);
+  ed.appendChild(dateIn);
+
+  let timeIn = null;
+  if (state.dueIsDateTime) {
+    timeIn = document.createElement("input");
+    timeIn.type = "time";
+    const mod = r.due.minuteOfDay >= 0 ? r.due.minuteOfDay : 9 * 60; // default 9:00 AM
+    timeIn.value = pad2(Math.floor(mod / 60)) + ":" + pad2(mod % 60);
+    ed.appendChild(timeIn);
+  }
+
+  const acts = el("div", "de-actions");
+  const save = el("button", "de-save"); save.textContent = "Save";
+  save.onclick = () => {
+    if (!dateIn.value) return;
+    const parts = dateIn.value.split("-").map(Number);
+    const Y = parts[0], M = parts[1], D = parts[2];
+    let ts;
+    if (state.dueIsDateTime) {
+      let h = 9, mi = 0;
+      if (timeIn && timeIn.value) { const tp = timeIn.value.split(":").map(Number); h = tp[0]; mi = tp[1]; }
+      ts = new Date(Y, M - 1, D, h, mi, 0, 0).getTime() / 1000;        // local moment
+    } else {
+      ts = Date.UTC(Y, M - 1, D) / 1000;                               // UTC midnight (pure Date)
+    }
+    state.openDateRow = null;
+    setDue(r.id, ts);
+    render();
+  };
+  const cancel = el("button", "de-cancel"); cancel.textContent = "Cancel";
+  cancel.onclick = () => { state.openDateRow = null; render(); };
+  acts.append(save, cancel);
+  ed.appendChild(acts);
+  return ed;
 }
 
 function dayListEl(key, compact) {
@@ -760,6 +859,7 @@ document.addEventListener("click", () => {
   let changed = false;
   if (state.openPopover) { state.openPopover = null; changed = true; }
   if (state.openStatusRow !== null) { state.openStatusRow = null; changed = true; }
+  if (state.openDateRow !== null) { state.openDateRow = null; changed = true; }
   if (changed) render();
 });
 
@@ -768,10 +868,10 @@ function selectInGrist(rowId) {
   try { grist.setCursorPos({ rowId }); } catch (e) { /* linked-cursor optional */ }
 }
 
-// Write a new status value back to the source table, directly from the calendar.
-async function setStatus(rowId, value) {
-  if (!state.mapped.status || !state.statusColId) return;
-  const fields = {}; fields[state.statusColId] = value;
+// Write a single field back to the source table, directly from the calendar.
+async function writeField(rowId, colId, value, label) {
+  if (!colId) return;
+  const fields = {}; fields[colId] = value;
   try {
     await grist.selectedTable.update({ id: rowId, fields: fields });
   } catch (e) {
@@ -779,10 +879,29 @@ async function setStatus(rowId, value) {
       const tid = await grist.selectedTable.getTableId();
       await grist.docApi.applyUserActions([["UpdateRecord", tid, rowId, fields]]);
     } catch (e2) {
-      console.error("status update failed", e2);
-      alert("Could not update status. The widget needs full (read \u0026 write) access \u2014 check the widget's access setting in the creator panel.");
+      console.error(label + " update failed", e2);
+      alert("Could not update " + label + ". The widget needs full (read \u0026 write) access \u2014 check the widget's access setting in the creator panel.");
     }
   }
+}
+function setStatus(rowId, value) { if (state.mapped.status) writeField(rowId, state.statusColId, value, "status"); }
+function setDue(rowId, ts) { if (state.mapped.due) writeField(rowId, state.dueColId, ts, "due date"); }
+
+// Resolve whether the Due Date column is a DateTime (carries a time) from doc metadata.
+async function detectDueType(dueColId) {
+  try {
+    const tableId = await grist.selectedTable.getTableId();
+    const tables = await grist.docApi.fetchTable("_grist_Tables");
+    let ref = null;
+    for (let i = 0; i < tables.id.length; i++) { if (tables.tableId[i] === tableId) { ref = tables.id[i]; break; } }
+    const cols = await grist.docApi.fetchTable("_grist_Tables_column");
+    for (let i = 0; i < cols.id.length; i++) {
+      if (cols.colId[i] === dueColId && (ref === null || cols.parentId[i] === ref)) {
+        return String(cols.type[i] || "").startsWith("DateTime");
+      }
+    }
+  } catch (e) { /* fall back to the data-based heuristic */ }
+  return null;
 }
 
 function persist() {
@@ -794,6 +913,7 @@ function persist() {
       sortDir: state.sortDir,
       hiddenCats: Array.from(state.hiddenCats),
       hiddenAsgs: Array.from(state.hiddenAsgs),
+      hiddenStatuses: Array.from(state.hiddenStatuses),
       redCats: Array.from(state.redCats),
     });
   } catch (e) {}
@@ -819,6 +939,7 @@ function ingest(records, mappings) {
     status: !!mappings.Status,
   };
   state.statusColId = mappings.Status || null;
+  state.dueColId = mappings.DueDate || null;
   const out = [];
   let unscheduled = 0;
   for (const rec of (records || [])) {
@@ -837,6 +958,8 @@ function ingest(records, mappings) {
   }
   state.records = out;
   state.unscheduled = unscheduled;
+  // Provisional due-type from data until metadata resolves it.
+  if (state.dueTypeFromMeta === null) state.dueIsDateTime = out.some(r => r.due.timed);
   seedRedCatsIfNeeded();
 }
 
@@ -876,11 +999,21 @@ if (state.haveGrist) {
     if (opts.sortDir) state.sortDir = opts.sortDir;
     if (Array.isArray(opts.hiddenCats)) state.hiddenCats = new Set(opts.hiddenCats);
     if (Array.isArray(opts.hiddenAsgs)) state.hiddenAsgs = new Set(opts.hiddenAsgs);
+    if (Array.isArray(opts.hiddenStatuses)) state.hiddenStatuses = new Set(opts.hiddenStatuses);
     if (Array.isArray(opts.redCats)) { state.redCats = new Set(opts.redCats); state.redCatsInit = true; }
     render();
   });
 
-  grist.onRecords((records, mappings) => { ingest(records, mappings); render(); });
+  grist.onRecords((records, mappings) => {
+    ingest(records, mappings);
+    render();
+    if (!state.dueTypeChecked && state.dueColId) {
+      state.dueTypeChecked = true;
+      detectDueType(state.dueColId).then(res => {
+        if (res !== null) { state.dueTypeFromMeta = res; state.dueIsDateTime = res; render(); }
+      });
+    }
+  });
 }
 
 render();
