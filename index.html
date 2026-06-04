@@ -195,6 +195,13 @@
   .row .main { flex: 1; min-width: 0; }
   .row .title { font-weight: 600; font-size: 13px; word-break: break-word; }
   .row .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  .row .desc {
+    font-size: 12px; color: var(--ink-soft); margin-top: 5px; white-space: pre-wrap; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  }
+  .row .desc.full { display: block; -webkit-line-clamp: none; overflow: visible; }
+  .row .descmore { display: none; font-size: 11px; color: var(--accent); margin-top: 3px; user-select: none; }
+  .row.expanded .descmore, .row.truncated .descmore { display: inline-block; }
   .tag { font-size: 11px; padding: 1px 7px; border-radius: 20px; background: #f0f2f0; color: var(--ink-soft); }
   .tag.cat { color: #fff; }
   .tag.asg::before { content: "@"; opacity: .6; margin-right: 1px; }
@@ -261,7 +268,7 @@ const state = {
   haveGrist: typeof grist !== "undefined" && grist && grist.ready,
   records: [],          // parsed + scheduled deadlines
   unscheduled: 0,       // records with missing/invalid due dates
-  mapped: { due: false, title: false, category: false, assignedTo: false, priority: false, status: false },
+  mapped: { due: false, title: false, category: false, assignedTo: false, priority: false, status: false, description: false },
   statusColId: null,    // real column id of the Status column (for write-back)
   dueColId: null,       // real column id of the Due Date column (for write-back)
   dueIsDateTime: false, // whether the due column carries a time component
@@ -280,6 +287,7 @@ const state = {
   openPopover: null,    // 'cat' | 'asg' | 'status' | 'sort' | 'flags' | null
   openStatusRow: null,  // rowId whose status menu is open
   openDateRow: null,    // rowId whose due-date editor is open
+  expandedRows: new Set(), // rowIds whose full description is shown
 };
 
 const COMPLETE_WORDS = new Set(["complete","completed","done","closed","resolved","finished"]);
@@ -456,7 +464,7 @@ function render() {
       '<div class="notice"><h2>Map your columns</h2><p>In the creator panel on the right, set the widget&rsquo;s column mappings:</p>'
       + '<ol><li><b>Due Date</b> &mdash; a Date or DateTime column (required)</li>'
       + '<li><b>Calendar Title</b> &mdash; the text shown for each deadline (required)</li>'
-      + '<li><b>Status</b>, <b>Category</b>, <b>Assigned To</b>, <b>Priority</b> &mdash; optional</li></ol></div>';
+      + '<li><b>Status</b>, <b>Description</b>, <b>Category</b>, <b>Assigned To</b>, <b>Priority</b> &mdash; optional</li></ol></div>';
     return;
   }
 
@@ -464,6 +472,15 @@ function render() {
   if (state.view === "month") body.innerHTML = "", body.appendChild(renderMonth());
   else if (state.view === "week") body.innerHTML = "", body.appendChild(renderWeek());
   else body.innerHTML = "", body.appendChild(renderDay());
+  adjustClamps();
+}
+
+// Reveal the "Show more" hint only on rows whose description preview is actually clipped.
+function adjustClamps() {
+  document.querySelectorAll(".row").forEach(row => {
+    const d = row.querySelector(".desc:not(.full)");
+    if (d && d.scrollHeight - d.clientHeight > 2) row.classList.add("truncated");
+  });
 }
 
 function renderMeta() {
@@ -639,7 +656,8 @@ function flagsDropdown() {
 /* ---- Deadline row ---- */
 function rowEl(r, compact) {
   const kind = classify(r);
-  const row = el("div", "row " + kind + (compact ? " compactrow" : ""));
+  const expanded = state.expandedRows.has(r.id);
+  const row = el("div", "row " + kind + (compact ? " compactrow" : "") + (expanded ? " expanded" : ""));
   const cats = recCats(r);
   row.style.borderLeftColor = stripeColor(r, kind);
 
@@ -663,11 +681,25 @@ function rowEl(r, compact) {
     tags.appendChild(Object.assign(el("span", "tag pri"), { textContent: "\u25B2 " + r.priority }));
   }
   if (tags.children.length) main.appendChild(tags);
+
+  const hasDesc = state.mapped.description && r.description !== null && r.description !== undefined && String(r.description).trim() !== "";
+  if (hasDesc) {
+    const desc = el("div", "desc" + (expanded ? " full" : ""));
+    desc.textContent = String(r.description);
+    main.appendChild(desc);
+    main.appendChild(Object.assign(el("div", "descmore"), { textContent: expanded ? "Show less \u25B4" : "Show more \u25BE" }));
+  }
   row.appendChild(main);
 
   if (state.mapped.status) row.appendChild(statusControl(r, kind));
 
-  row.onclick = () => selectInGrist(r.id);
+  row.onclick = () => {
+    if (hasDesc) {
+      if (expanded) state.expandedRows.delete(r.id); else state.expandedRows.add(r.id);
+      render();
+    }
+    selectInGrist(r.id);
+  };
   return row;
 }
 
@@ -967,6 +999,7 @@ function ingest(records, mappings) {
     assignedTo: !!mappings.AssignedTo,
     priority: !!mappings.Priority,
     status: !!mappings.Status,
+    description: !!mappings.Description,
   };
   state.statusColId = mappings.Status || null;
   state.dueColId = mappings.DueDate || null;
@@ -984,6 +1017,7 @@ function ingest(records, mappings) {
       assignedTo: state.mapped.assignedTo ? pick(rec, mappings, "AssignedTo") : null,
       priority: state.mapped.priority ? pick(rec, mappings, "Priority") : null,
       status: state.mapped.status ? pick(rec, mappings, "Status") : null,
+      description: state.mapped.description ? pick(rec, mappings, "Description") : null,
     });
   }
   state.records = out;
@@ -1016,6 +1050,7 @@ if (state.haveGrist) {
       { name: "DueDate", title: "Due Date", type: "Date,DateTime", description: "Date or DateTime that places the deadline on the calendar." },
       { name: "Title", title: "Calendar Title", type: "Any", description: "Text shown for each deadline." },
       { name: "Status", title: "Status", type: "Choice,Text", optional: true, description: "e.g. Complete / Incomplete / Ready. Editable from the calendar; Complete/Done/Closed turn the deadline green." },
+      { name: "Description", title: "Description", type: "Text,Any", optional: true, description: "A longer note. Shown clipped under each deadline in the list views; click the row to expand the full text." },
       { name: "Category", title: "Category", type: "Choice,ChoiceList,Text", optional: true, description: "Used for coloring, the Categories filter, and the critical (red) Flags list." },
       { name: "AssignedTo", title: "Assigned To", type: "Choice,ChoiceList,Text", optional: true, description: "One or more team members; powers the Assigned filter." },
       { name: "Priority", title: "Priority", type: "Any", optional: true, description: "Number or choice (e.g. High/Medium/Low). High/important values turn the deadline red; also used for optional priority sorting." },
