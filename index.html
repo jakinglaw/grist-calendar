@@ -170,6 +170,8 @@
   }
   .row .time.none { color: var(--ink-faint); }
   .row .time.editable:hover { color: var(--accent); text-decoration-color: var(--accent); }
+  .row .time.bare { text-decoration: none; min-width: 0; opacity: .65; }
+  .row .time.bare:hover { opacity: 1; }
   .row .time .pen { font-size: 10px; margin-left: 3px; opacity: .45; }
   .row .time.editable:hover .pen { opacity: .9; }
 
@@ -206,7 +208,9 @@
   .tag.cat { color: #fff; }
   .tag.asg::before { content: "@"; opacity: .6; margin-right: 1px; }
   .tag.pri { border: 1px solid var(--line-strong); background: #fff; }
-  .compactrow { padding: 6px 8px; border-radius: 6px; flex-wrap: wrap; }
+  .compactrow { flex-direction: column; align-items: stretch; gap: 4px; padding: 7px 9px; border-radius: 7px; }
+  .compactrow .duewrap { align-self: flex-start; }
+  .compactrow .statuswrap { margin-left: 0; align-self: flex-start; }
   .compactrow .title { font-size: 12px; }
 
   .row.complete { background: var(--green-mid); }
@@ -239,6 +243,51 @@
 
   .empty { color: var(--ink-faint); padding: 14px; font-style: italic; }
 
+  /* Inline field editors (description, assignee) */
+  .fieldedit { margin-top: 6px; display: flex; flex-direction: column; gap: 6px; background: #fff; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px; }
+  .fieldedit textarea { font: inherit; min-height: 64px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px; width: 100%; box-sizing: border-box; }
+  .fe-actions { display: flex; gap: 6px; }
+  .fe-actions button { border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px 12px; cursor: pointer; font: inherit; }
+  .fe-save { background: var(--accent); color: #fff; border-color: var(--accent) !important; }
+  .fe-save:hover { filter: brightness(1.05); }
+  .fe-cancel { background: #fff; color: var(--ink-soft); }
+  .fe-cancel:hover { background: #eef1ef; }
+  .editlink { font-size: 11px; color: var(--accent); cursor: pointer; user-select: none; margin-top: 4px; display: inline-block; }
+  .editlink:hover { text-decoration: underline; }
+  .addnote { font-size: 11px; color: var(--ink-faint); cursor: pointer; margin-top: 5px; display: inline-block; user-select: none; }
+  .addnote:hover { color: var(--accent); }
+  .tag.editchip { background: #fff; border: 1px dashed var(--line-strong); color: var(--ink-faint); cursor: pointer; }
+  .tag.editchip:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* Assignee picker (shared by inline editor + new-task modal) */
+  .picker { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pchip { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--line-strong); background: #fff; color: var(--ink-soft); cursor: pointer; }
+  .pchip.sel { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .padd { display: flex; gap: 6px; margin-top: 6px; }
+  .padd input { flex: 1; font: inherit; padding: 5px 6px; border: 1px solid var(--line-strong); border-radius: 6px; min-width: 0; }
+  .padd button { border: 1px solid var(--line-strong); background: #f6f8f6; border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; }
+  .padd button:hover { background: var(--accent-soft); }
+
+  /* New-deadline button + modal */
+  .newbtn { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: var(--radius); padding: 6px 13px; cursor: pointer; font: inherit; font-weight: 600; }
+  .newbtn:hover { filter: brightness(1.06); }
+  .addday { border: 1px solid var(--line-strong); background: #fff; color: var(--accent); border-radius: 6px; padding: 3px 10px; cursor: pointer; font: inherit; font-size: 12px; margin: 8px 14px 2px; }
+  .addday:hover { background: var(--accent-soft); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(20,30,28,.4); display: flex; align-items: flex-start; justify-content: center; z-index: 200; padding: 22px 12px; overflow: auto; }
+  .modal { background: #fff; border-radius: 12px; box-shadow: var(--shadow); width: 100%; max-width: 380px; padding: 16px 18px 18px; }
+  .modal h3 { font-family: var(--display); margin: 0 0 6px; font-size: 19px; }
+  .modal label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); margin: 11px 0 3px; }
+  .modal input[type=text], .modal input[type=date], .modal input[type=time], .modal textarea { width: 100%; font: inherit; padding: 7px 8px; border: 1px solid var(--line-strong); border-radius: 7px; box-sizing: border-box; }
+  .modal textarea { min-height: 58px; resize: vertical; }
+  .modal .row2 { display: flex; gap: 8px; }
+  .modal .row2 > div { flex: 1; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+  .modal-actions button { flex: 1; border: 1px solid var(--line-strong); border-radius: 8px; padding: 9px; cursor: pointer; font: inherit; }
+  .m-create { background: var(--accent); color: #fff; border-color: var(--accent) !important; font-weight: 600; }
+  .m-create:hover { filter: brightness(1.05); }
+  .m-cancel { background: #fff; color: var(--ink-soft); }
+  .m-cancel:hover { background: #eef1ef; }
+
   /* Messages */
   .notice { padding: 28px; max-width: 460px; margin: 24px auto; text-align: center; color: var(--ink-soft); }
   .notice h2 { font-family: var(--display); color: var(--ink); }
@@ -269,11 +318,18 @@ const state = {
   records: [],          // parsed + scheduled deadlines
   unscheduled: 0,       // records with missing/invalid due dates
   mapped: { due: false, title: false, category: false, assignedTo: false, priority: false, status: false, description: false },
+  cols: {},             // logical name -> real column id (for write/create)
   statusColId: null,    // real column id of the Status column (for write-back)
   dueColId: null,       // real column id of the Due Date column (for write-back)
+  descColId: null,
+  asgColId: null,
   dueIsDateTime: false, // whether the due column carries a time component
   dueTypeFromMeta: null,// resolved column type from metadata (null until known)
-  dueTypeChecked: false,
+  asgMulti: false,      // Assigned To holds multiple values (ChoiceList)
+  asgTypeKnown: false,
+  catMulti: false,      // Category holds multiple values (ChoiceList)
+  catTypeKnown: false,
+  typesChecked: false,
   view: "month",        // 'day' | 'week' | 'month'
   focus: stripTime(today),
   selectedKey: dayKeyFromDate(today),
@@ -287,6 +343,10 @@ const state = {
   openPopover: null,    // 'cat' | 'asg' | 'status' | 'sort' | 'flags' | null
   openStatusRow: null,  // rowId whose status menu is open
   openDateRow: null,    // rowId whose due-date editor is open
+  editingDescRow: null, // rowId whose description editor is open
+  editingAsgRow: null,  // rowId whose assignee editor is open
+  editingCatRow: null,  // rowId whose category editor is open
+  editingPriRow: null,  // rowId whose priority editor is open
   expandedRows: new Set(), // rowIds whose full description is shown
 };
 
@@ -522,6 +582,12 @@ function renderToolbar() {
   period.textContent = periodLabel();
   tb.appendChild(period);
 
+  const nb = el("button", "newbtn");
+  nb.innerHTML = "\uFF0B New";
+  nb.title = "Create a new deadline";
+  nb.onclick = (e) => { e.stopPropagation(); openNewTask(state.selectedKey); };
+  tb.appendChild(nb);
+
   tb.appendChild(el("div", "spacer"));
 
   if (state.mapped.category) tb.appendChild(filterDropdown("cat", "Categories", state.hiddenCats, recCats));
@@ -657,11 +723,14 @@ function flagsDropdown() {
 function rowEl(r, compact) {
   const kind = classify(r);
   const expanded = state.expandedRows.has(r.id);
+  const editingAsg = state.editingAsgRow === r.id;
+  const editingDesc = state.editingDescRow === r.id;
+  const editingCat = state.editingCatRow === r.id;
+  const editingPri = state.editingPriRow === r.id;
   const row = el("div", "row " + kind + (compact ? " compactrow" : "") + (expanded ? " expanded" : ""));
-  const cats = recCats(r);
   row.style.borderLeftColor = stripeColor(r, kind);
 
-  row.appendChild(dueCell(r));
+  row.appendChild(dueCell(r, compact));
 
   const main = el("div", "main");
   const title = el("div", "title" + (kind === "complete" ? " done" : ""));
@@ -669,32 +738,60 @@ function rowEl(r, compact) {
   main.appendChild(title);
 
   const tags = el("div", "tags");
-  if (state.mapped.category) cats.forEach(c => {
-    if (c === NO_CAT) return;
-    const t = el("span", "tag cat"); t.style.background = catColor(c); t.textContent = c; tags.appendChild(t);
-  });
-  if (state.mapped.assignedTo) recAsgs(r).forEach(a => {
-    if (a === UNASSIGNED) return;
-    tags.appendChild(Object.assign(el("span", "tag asg"), { textContent: a }));
-  });
-  if (state.mapped.priority && r.priority !== null && r.priority !== undefined && r.priority !== "") {
-    tags.appendChild(Object.assign(el("span", "tag pri"), { textContent: "\u25B2 " + r.priority }));
+  if (state.mapped.category && !editingCat) {
+    recCats(r).forEach(c => {
+      if (c === NO_CAT) return;
+      const t = el("span", "tag cat"); t.style.background = catColor(c); t.textContent = c; tags.appendChild(t);
+    });
+    const hasCat = recCats(r)[0] !== NO_CAT;
+    tags.appendChild(makeEditChip(hasCat, "\uFF0B category", "Edit category", () => openInlineEditor("cat", r.id)));
+  }
+  if (state.mapped.assignedTo && !editingAsg) {
+    recAsgs(r).forEach(a => {
+      if (a === UNASSIGNED) return;
+      tags.appendChild(Object.assign(el("span", "tag asg"), { textContent: a }));
+    });
+    const hasAsg = recAsgs(r)[0] !== UNASSIGNED;
+    tags.appendChild(makeEditChip(hasAsg, "\uFF0B assign", "Edit who's assigned", () => openInlineEditor("asg", r.id)));
+  }
+  if (state.mapped.priority && !editingPri) {
+    const hasPri = r.priority !== null && r.priority !== undefined && r.priority !== "";
+    if (hasPri) tags.appendChild(Object.assign(el("span", "tag pri"), { textContent: "\u25B2 " + r.priority }));
+    tags.appendChild(makeEditChip(hasPri, "\uFF0B priority", "Edit priority", () => openInlineEditor("pri", r.id)));
   }
   if (tags.children.length) main.appendChild(tags);
 
-  const hasDesc = state.mapped.description && r.description !== null && r.description !== undefined && String(r.description).trim() !== "";
-  if (hasDesc) {
-    const desc = el("div", "desc" + (expanded ? " full" : ""));
-    desc.textContent = String(r.description);
-    main.appendChild(desc);
-    main.appendChild(Object.assign(el("div", "descmore"), { textContent: expanded ? "Show less \u25B4" : "Show more \u25BE" }));
+  if (state.mapped.category && editingCat) main.appendChild(categoryEditor(r));
+  if (state.mapped.assignedTo && editingAsg) main.appendChild(assigneeEditor(r));
+  if (state.mapped.priority && editingPri) main.appendChild(priorityEditor(r));
+
+  // Description: editor, or expandable preview, or "+ Add note"
+  const hasDesc = r.description !== null && r.description !== undefined && String(r.description).trim() !== "";
+  if (state.mapped.description) {
+    if (editingDesc) {
+      main.appendChild(descEditor(r));
+    } else if (hasDesc) {
+      const desc = el("div", "desc" + (expanded ? " full" : ""));
+      desc.textContent = String(r.description);
+      main.appendChild(desc);
+      main.appendChild(Object.assign(el("div", "descmore"), { textContent: expanded ? "Show less \u25B4" : "Show more \u25BE" }));
+      if (expanded) {
+        const ed = el("span", "editlink"); ed.textContent = "Edit note";
+        ed.onclick = (e) => { e.stopPropagation(); openInlineEditor("desc", r.id); };
+        main.appendChild(ed);
+      }
+    } else {
+      const add = el("span", "addnote"); add.textContent = "\uFF0B Add note";
+      add.onclick = (e) => { e.stopPropagation(); openInlineEditor("desc", r.id); };
+      main.appendChild(add);
+    }
   }
   row.appendChild(main);
 
   if (state.mapped.status) row.appendChild(statusControl(r, kind));
 
   row.onclick = () => {
-    if (hasDesc) {
+    if (hasDesc && !editingDesc) {
       if (expanded) state.expandedRows.delete(r.id); else state.expandedRows.add(r.id);
       render();
     }
@@ -703,13 +800,143 @@ function rowEl(r, compact) {
   return row;
 }
 
+function makeEditChip(hasValue, emptyLabel, tip, onClick) {
+  const c = el("span", "tag editchip");
+  c.textContent = hasValue ? "\u270E" : emptyLabel;
+  c.title = tip;
+  c.onclick = (e) => { e.stopPropagation(); onClick(); };
+  return c;
+}
+
+// Clear every transient popover/inline-editor state.
+function clearTransient() {
+  state.openDateRow = null; state.openStatusRow = null;
+  state.editingDescRow = null; state.editingAsgRow = null;
+  state.editingCatRow = null; state.editingPriRow = null;
+}
+
+// Open one inline editor at a time, closing the other transient popovers.
+function openInlineEditor(which, rowId) {
+  clearTransient();
+  if (which === "desc") state.editingDescRow = rowId;
+  else if (which === "asg") state.editingAsgRow = rowId;
+  else if (which === "cat") state.editingCatRow = rowId;
+  else if (which === "pri") state.editingPriRow = rowId;
+  render();
+}
+
+function descEditor(r) {
+  const ed = el("div", "fieldedit");
+  ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+  const ta = document.createElement("textarea");
+  ta.value = (r.description !== null && r.description !== undefined) ? String(r.description) : "";
+  ta.placeholder = "Add a note\u2026";
+  ed.appendChild(ta);
+  const acts = el("div", "fe-actions");
+  const save = el("button", "fe-save"); save.textContent = "Save";
+  save.onclick = () => { state.editingDescRow = null; setDescription(r.id, ta.value); render(); };
+  const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
+  cancel.onclick = () => { state.editingDescRow = null; render(); };
+  acts.append(save, cancel); ed.appendChild(acts);
+  return ed;
+}
+
+function assigneeEditor(r) {
+  const ed = el("div", "fieldedit");
+  ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+  const initial = recAsgs(r).filter(a => a !== UNASSIGNED);
+  const known = distinctValues(recAsgs).filter(v => v !== UNASSIGNED);
+  const picker = buildTagPicker(initial, state.asgMulti, known, "name");
+  ed.appendChild(picker.element);
+  const acts = el("div", "fe-actions");
+  const save = el("button", "fe-save"); save.textContent = "Save";
+  save.onclick = () => { state.editingAsgRow = null; setAssignees(r.id, picker.get()); render(); };
+  const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
+  cancel.onclick = () => { state.editingAsgRow = null; render(); };
+  acts.append(save, cancel); ed.appendChild(acts);
+  return ed;
+}
+
+function categoryEditor(r) {
+  const ed = el("div", "fieldedit");
+  ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+  const initial = recCats(r).filter(c => c !== NO_CAT);
+  const known = distinctValues(recCats).filter(c => c !== NO_CAT);
+  const picker = buildTagPicker(initial, state.catMulti, known, "category");
+  ed.appendChild(picker.element);
+  const acts = el("div", "fe-actions");
+  const save = el("button", "fe-save"); save.textContent = "Save";
+  save.onclick = () => { state.editingCatRow = null; setCategory(r.id, picker.get()); render(); };
+  const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
+  cancel.onclick = () => { state.editingCatRow = null; render(); };
+  acts.append(save, cancel); ed.appendChild(acts);
+  return ed;
+}
+
+function priorityEditor(r) {
+  const ed = el("div", "fieldedit");
+  ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+  const has = r.priority !== null && r.priority !== undefined && r.priority !== "";
+  const initial = has ? [String(r.priority)] : [];
+  const known = distinctValues(rr => {
+    const v = rr.priority; return (v === null || v === undefined || v === "") ? [] : [String(v)];
+  });
+  const picker = buildTagPicker(initial, false, known, "priority");
+  ed.appendChild(picker.element);
+  const acts = el("div", "fe-actions");
+  const save = el("button", "fe-save"); save.textContent = "Save";
+  save.onclick = () => { state.editingPriRow = null; setPriority(r.id, picker.get()); render(); };
+  const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
+  cancel.onclick = () => { state.editingPriRow = null; render(); };
+  acts.append(save, cancel); ed.appendChild(acts);
+  return ed;
+}
+
+// Self-contained multi/single tag picker; manages its own selection without a global re-render.
+function buildTagPicker(initial, multi, known, noun) {
+  const wrap = el("div", "picker-wrap");
+  const picker = el("div", "picker");
+  const selected = new Set(initial || []);
+  const all = Array.from(new Set((known || []).concat(Array.from(selected))));
+  function sync() { picker.querySelectorAll(".pchip").forEach(c => c.classList.toggle("sel", selected.has(c.textContent))); }
+  function chipFor(name) {
+    const chip = el("div", "pchip" + (selected.has(name) ? " sel" : ""));
+    chip.textContent = name;
+    chip.onclick = (e) => {
+      e.stopPropagation();
+      if (selected.has(name)) selected.delete(name);
+      else { if (!multi) selected.clear(); selected.add(name); }
+      sync();
+    };
+    return chip;
+  }
+  all.forEach(n => picker.appendChild(chipFor(n)));
+  wrap.appendChild(picker);
+  const add = el("div", "padd");
+  const inp = document.createElement("input"); inp.type = "text";
+  inp.placeholder = multi ? ("Add a " + (noun || "value") + "\u2026") : ("Or type a " + (noun || "value") + "\u2026");
+  const btn = el("button"); btn.textContent = "Add";
+  const doAdd = () => {
+    const v = inp.value.trim(); if (!v) return;
+    if (!multi) selected.clear();
+    selected.add(v);
+    const exists = Array.prototype.some.call(picker.querySelectorAll(".pchip"), c => c.textContent === v);
+    if (!exists) picker.appendChild(chipFor(v));
+    sync(); inp.value = "";
+  };
+  btn.onclick = (e) => { e.stopPropagation(); doAdd(); };
+  inp.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); doAdd(); } };
+  add.append(inp, btn); wrap.appendChild(add);
+  return { element: wrap, get: () => Array.from(selected) };
+}
+
 // Clickable status pill with a dropdown that writes the chosen status back to Grist.
 function statusControl(r, kind) {
   const wrap = el("div", "statuswrap");
   const has = r.status !== null && r.status !== undefined && String(r.status).trim() !== "";
   const pill = el("button", "statuspill" + (kind === "complete" ? " is-complete" : ""));
   pill.innerHTML = esc(has ? String(r.status) : "Set status") + ' <span class="pcaret">&#9662;</span>';
-  pill.onclick = (e) => { e.stopPropagation(); state.openDateRow = null; state.openStatusRow = state.openStatusRow === r.id ? null : r.id; render(); };
+  pill.onclick = (e) => { e.stopPropagation(); const wasOpen = state.openStatusRow === r.id; clearTransient(); state.openStatusRow = wasOpen ? null : r.id; render(); };
   wrap.appendChild(pill);
 
   if (state.openStatusRow === r.id) {
@@ -758,17 +985,33 @@ function shiftDateInput(input, n) {
   input.value = pad4(d.getFullYear()) + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
 }
 
+// Encode a chosen date/time back to a Grist timestamp (UTC midnight for Date, local moment for DateTime).
+function encodeDue(dateStr, timeStr) {
+  const p = dateStr.split("-").map(Number);
+  const Y = p[0], M = p[1], D = p[2];
+  if (state.dueIsDateTime) {
+    let h = 9, mi = 0;
+    if (timeStr) { const t = timeStr.split(":").map(Number); h = t[0]; mi = t[1]; }
+    return new Date(Y, M - 1, D, h, mi, 0, 0).getTime() / 1000;
+  }
+  return Date.UTC(Y, M - 1, D) / 1000;
+}
+
 // Clickable due time/date that opens an inline editor writing the new date back to Grist.
-function dueCell(r) {
+function dueCell(r, compact) {
   const wrap = el("div", "duewrap");
-  const btn = el("button", "time editable");
+  let label;
+  if (r.due.timeStr) label = r.due.timeStr;       // timed: always show the time
+  else if (compact) label = "";                   // week chip: day is already in the column header
+  else label = fmtShortDate(r.due);               // list views: show the assigned date
+  const btn = el("button", "time editable" + (label ? "" : " bare"));
   btn.title = "Click to change the due date";
-  const label = r.due.timeStr ? r.due.timeStr : fmtShortDate(r.due);
-  btn.innerHTML = esc(label) + ' <span class="pen">\u270E</span>';
+  btn.innerHTML = (label ? esc(label) + " " : "") + '<span class="pen">\u270E</span>';
   btn.onclick = (e) => {
     e.stopPropagation();
-    state.openStatusRow = null;
-    state.openDateRow = state.openDateRow === r.id ? null : r.id;
+    const wasOpen = state.openDateRow === r.id;
+    clearTransient();
+    state.openDateRow = wasOpen ? null : r.id;
     render();
   };
   wrap.appendChild(btn);
@@ -807,16 +1050,7 @@ function dateEditor(r) {
   const save = el("button", "de-save"); save.textContent = "Save";
   save.onclick = () => {
     if (!dateIn.value) return;
-    const parts = dateIn.value.split("-").map(Number);
-    const Y = parts[0], M = parts[1], D = parts[2];
-    let ts;
-    if (state.dueIsDateTime) {
-      let h = 9, mi = 0;
-      if (timeIn && timeIn.value) { const tp = timeIn.value.split(":").map(Number); h = tp[0]; mi = tp[1]; }
-      ts = new Date(Y, M - 1, D, h, mi, 0, 0).getTime() / 1000;        // local moment
-    } else {
-      ts = Date.UTC(Y, M - 1, D) / 1000;                               // UTC midnight (pure Date)
-    }
+    const ts = encodeDue(dateIn.value, timeIn ? timeIn.value : null);
     state.openDateRow = null;
     setDue(r.id, ts);
     render();
@@ -878,6 +1112,10 @@ function renderMonth() {
   const panel = el("div", "daypanel");
   const sel = parseKeyToDate(state.selectedKey);
   panel.appendChild(Object.assign(el("h3"), { textContent: "Deadlines on " + DOW[sel.getDay()] + ", " + MONTHS[sel.getMonth()] + " " + sel.getDate() }));
+  const addBtn = el("button", "addday");
+  addBtn.innerHTML = "\uFF0B Add deadline on this day";
+  addBtn.onclick = (e) => { e.stopPropagation(); openNewTask(state.selectedKey); };
+  panel.appendChild(addBtn);
   const list = el("div", "list");
   list.appendChild(dayListEl(state.selectedKey, false));
   panel.appendChild(list);
@@ -917,6 +1155,92 @@ function renderDay() {
 function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
 function parseKeyToDate(key) { const [y, m, d] = key.split("-").map(Number); return new Date(y, m, d); }
 
+/* ===================== New-task modal ===================== */
+function closeModal() { const m = document.querySelector(".modal-overlay"); if (m) m.remove(); }
+
+function labelEl(text) { return Object.assign(el("label"), { textContent: text }); }
+
+// Text input backed by a datalist of known values (choose existing or type new).
+function datalistInput(values, id) {
+  const wrap = el("div");
+  const inp = document.createElement("input"); inp.type = "text"; inp.setAttribute("list", id);
+  const dl = document.createElement("datalist"); dl.id = id;
+  values.forEach(v => { const o = document.createElement("option"); o.value = v; dl.appendChild(o); });
+  wrap.append(inp, dl);
+  return { wrap: wrap, value: () => inp.value.trim() };
+}
+
+function openNewTask(prefillKey) {
+  if (!state.haveGrist || !state.mapped.due || !state.mapped.title) return;
+  closeModal();
+  const overlay = el("div", "modal-overlay");
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+  document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { closeModal(); document.removeEventListener("keydown", esc); } });
+
+  const modal = el("div", "modal");
+  modal.addEventListener("click", e => e.stopPropagation());
+  modal.appendChild(Object.assign(el("h3"), { textContent: "New deadline" }));
+
+  modal.appendChild(labelEl("Title"));
+  const titleIn = document.createElement("input"); titleIn.type = "text"; titleIn.placeholder = "e.g. File response to MSJ";
+  modal.appendChild(titleIn);
+
+  const base = prefillKey ? parseKeyToDate(prefillKey) : new Date();
+  modal.appendChild(labelEl(state.dueIsDateTime ? "Due date & time" : "Due date"));
+  const row2 = el("div", "row2");
+  const dwrap = el("div");
+  const dateIn = document.createElement("input"); dateIn.type = "date";
+  dateIn.value = pad4(base.getFullYear()) + "-" + pad2(base.getMonth() + 1) + "-" + pad2(base.getDate());
+  dwrap.appendChild(dateIn); row2.appendChild(dwrap);
+  let timeIn = null;
+  if (state.dueIsDateTime) {
+    const twrap = el("div");
+    timeIn = document.createElement("input"); timeIn.type = "time"; timeIn.value = "09:00";
+    twrap.appendChild(timeIn); row2.appendChild(twrap);
+  }
+  modal.appendChild(row2);
+
+  let statusIn = null, catIn = null, priIn = null, asgPicker = null, descIn = null;
+  if (state.mapped.status) { modal.appendChild(labelEl("Status")); statusIn = datalistInput(statusOptions(), "nt-status"); modal.appendChild(statusIn.wrap); }
+  if (state.mapped.category) { modal.appendChild(labelEl("Category")); catIn = datalistInput(distinctValues(recCats).filter(c => c !== NO_CAT), "nt-cat"); modal.appendChild(catIn.wrap); }
+  if (state.mapped.priority) {
+    modal.appendChild(labelEl("Priority"));
+    const pv = distinctValues(r => { const v = r.priority; return (v === null || v === undefined || v === "") ? [] : [String(v)]; });
+    priIn = datalistInput(pv, "nt-pri"); modal.appendChild(priIn.wrap);
+  }
+  if (state.mapped.assignedTo) { modal.appendChild(labelEl("Assigned to")); asgPicker = buildTagPicker([], state.asgMulti, distinctValues(recAsgs).filter(v => v !== UNASSIGNED), "name"); modal.appendChild(asgPicker.element); }
+  if (state.mapped.description) { modal.appendChild(labelEl("Description")); descIn = document.createElement("textarea"); modal.appendChild(descIn); }
+
+  const acts = el("div", "modal-actions");
+  const createB = el("button", "m-create"); createB.textContent = "Create";
+  createB.onclick = () => {
+    const title = titleIn.value.trim();
+    if (!title) { titleIn.style.borderColor = "var(--red)"; titleIn.focus(); return; }
+    if (!dateIn.value) { dateIn.style.borderColor = "var(--red)"; return; }
+    const fields = {};
+    fields[state.cols.Title] = title;
+    fields[state.cols.DueDate] = encodeDue(dateIn.value, timeIn ? timeIn.value : null);
+    if (statusIn && statusIn.value()) fields[state.cols.Status] = statusIn.value();
+    if (catIn && catIn.value()) fields[state.cols.Category] = state.catMulti ? ["L", catIn.value()] : catIn.value();
+    if (priIn && priIn.value()) {
+      const pv = priIn.value();
+      fields[state.cols.Priority] = (pv !== "" && !isNaN(Number(pv))) ? Number(pv) : pv;
+    }
+    if (asgPicker) { const a = encodeAssignees(asgPicker.get()); if (a !== null) fields[state.cols.AssignedTo] = a; }
+    if (descIn && descIn.value.trim()) fields[state.cols.Description] = descIn.value;
+    createTask(fields);
+    closeModal();
+  };
+  const cancelB = el("button", "m-cancel"); cancelB.textContent = "Cancel";
+  cancelB.onclick = () => closeModal();
+  acts.append(createB, cancelB);
+  modal.appendChild(acts);
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  titleIn.focus();
+}
+
 document.addEventListener("click", () => {
   let changed = false;
   if (state.openPopover) { state.openPopover = null; changed = true; }
@@ -948,22 +1272,64 @@ async function writeField(rowId, colId, value, label) {
 }
 function setStatus(rowId, value) { if (state.mapped.status) writeField(rowId, state.statusColId, value, "status"); }
 function setDue(rowId, ts) { if (state.mapped.due) writeField(rowId, state.dueColId, ts, "due date"); }
+function setDescription(rowId, text) {
+  if (state.mapped.description) writeField(rowId, state.descColId, (text && text.trim() !== "") ? text : null, "description");
+}
+function encodeMulti(arr, multi) {
+  if (!arr || !arr.length) return null;
+  return multi ? ["L"].concat(arr) : arr[0];
+}
+function encodeAssignees(arr) { return encodeMulti(arr, state.asgMulti); }
+function setAssignees(rowId, arr) {
+  if (state.mapped.assignedTo) writeField(rowId, state.asgColId, encodeAssignees(arr), "assignee");
+}
+function setCategory(rowId, arr) {
+  if (state.mapped.category) writeField(rowId, state.cols.Category, encodeMulti(arr, state.catMulti), "category");
+}
+function setPriority(rowId, arr) {
+  if (!state.mapped.priority) return;
+  let v = (arr && arr.length) ? arr[0] : null;
+  if (v !== null && v !== "" && !isNaN(Number(v))) v = Number(v);
+  writeField(rowId, state.cols.Priority, v, "priority");
+}
+async function createTask(fields) {
+  try {
+    await grist.selectedTable.create({ fields: fields });
+  } catch (e) {
+    try {
+      const tid = await grist.selectedTable.getTableId();
+      await grist.docApi.applyUserActions([["AddRecord", tid, null, fields]]);
+    } catch (e2) {
+      console.error("create failed", e2);
+      alert("Could not create the deadline. The widget needs full (read \u0026 write) access \u2014 check the widget's access setting in the creator panel.");
+    }
+  }
+}
 
-// Resolve whether the Due Date column is a DateTime (carries a time) from doc metadata.
-async function detectDueType(dueColId) {
+// Resolve relevant column types (Date vs DateTime, single vs list) from doc metadata.
+async function detectColumnTypes() {
   try {
     const tableId = await grist.selectedTable.getTableId();
     const tables = await grist.docApi.fetchTable("_grist_Tables");
     let ref = null;
     for (let i = 0; i < tables.id.length; i++) { if (tables.tableId[i] === tableId) { ref = tables.id[i]; break; } }
     const cols = await grist.docApi.fetchTable("_grist_Tables_column");
-    for (let i = 0; i < cols.id.length; i++) {
-      if (cols.colId[i] === dueColId && (ref === null || cols.parentId[i] === ref)) {
-        return String(cols.type[i] || "").startsWith("DateTime");
+    const typeOf = (colId) => {
+      if (!colId) return null;
+      for (let i = 0; i < cols.id.length; i++) {
+        if (cols.colId[i] === colId && (ref === null || cols.parentId[i] === ref)) return String(cols.type[i] || "");
       }
-    }
-  } catch (e) { /* fall back to the data-based heuristic */ }
-  return null;
+      return null;
+    };
+    const isList = (t) => t.indexOf("ChoiceList") === 0 || t.indexOf("RefList") === 0;
+    const dt = typeOf(state.cols.DueDate);
+    if (dt !== null) { state.dueTypeFromMeta = dt.indexOf("DateTime") === 0; state.dueIsDateTime = state.dueTypeFromMeta; }
+    const at = typeOf(state.cols.AssignedTo);
+    if (at !== null) { state.asgMulti = isList(at); state.asgTypeKnown = true; }
+    const ct = typeOf(state.cols.Category);
+    if (ct !== null) { state.catMulti = isList(ct); state.catTypeKnown = true; }
+    render();
+  } catch (e) { /* keep data-based heuristics */ }
 }
 
 function persist() {
@@ -1001,8 +1367,19 @@ function ingest(records, mappings) {
     status: !!mappings.Status,
     description: !!mappings.Description,
   };
+  state.cols = {
+    DueDate: mappings.DueDate || null,
+    Title: mappings.Title || null,
+    Status: mappings.Status || null,
+    Category: mappings.Category || null,
+    AssignedTo: mappings.AssignedTo || null,
+    Priority: mappings.Priority || null,
+    Description: mappings.Description || null,
+  };
   state.statusColId = mappings.Status || null;
   state.dueColId = mappings.DueDate || null;
+  state.descColId = mappings.Description || null;
+  state.asgColId = mappings.AssignedTo || null;
   const out = [];
   let unscheduled = 0;
   for (const rec of (records || [])) {
@@ -1022,8 +1399,10 @@ function ingest(records, mappings) {
   }
   state.records = out;
   state.unscheduled = unscheduled;
-  // Provisional due-type from data until metadata resolves it.
+  // Provisional types from data until metadata resolves them.
   if (state.dueTypeFromMeta === null) state.dueIsDateTime = out.some(r => r.due.timed);
+  if (!state.asgTypeKnown) state.asgMulti = out.some(r => Array.isArray(r.assignedTo));
+  if (!state.catTypeKnown) state.catMulti = out.some(r => Array.isArray(r.category));
   seedRedCatsIfNeeded();
 }
 
@@ -1072,11 +1451,9 @@ if (state.haveGrist) {
   grist.onRecords((records, mappings) => {
     ingest(records, mappings);
     render();
-    if (!state.dueTypeChecked && state.dueColId) {
-      state.dueTypeChecked = true;
-      detectDueType(state.dueColId).then(res => {
-        if (res !== null) { state.dueTypeFromMeta = res; state.dueIsDateTime = res; render(); }
-      });
+    if (!state.typesChecked && state.dueColId) {
+      state.typesChecked = true;
+      detectColumnTypes();
     }
   });
 }
