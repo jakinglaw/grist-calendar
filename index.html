@@ -208,6 +208,7 @@
   .tag.cat { color: #fff; }
   .tag.asg::before { content: "@"; opacity: .6; margin-right: 1px; }
   .tag.pri { border: 1px solid var(--line-strong); background: #fff; }
+  .tag.pri.imp { background: var(--red-soft); border-color: #e6b3a8; color: var(--red); font-weight: 600; }
   .compactrow { flex-direction: column; align-items: stretch; gap: 4px; padding: 7px 9px; border-radius: 7px; }
   .compactrow .duewrap { align-self: flex-start; }
   .compactrow .statuswrap { margin-left: 0; align-self: flex-start; }
@@ -329,6 +330,8 @@ const state = {
   asgTypeKnown: false,
   catMulti: false,      // Category holds multiple values (ChoiceList)
   catTypeKnown: false,
+  priIsBool: false,     // Priority is a boolean/toggle column
+  priTypeKnown: false,
   typesChecked: false,
   view: "month",        // 'day' | 'week' | 'month'
   focus: stripTime(today),
@@ -411,8 +414,12 @@ const PRI_WORDS = {
 };
 function priorityRank(v) {
   if (v === null || v === undefined || v === "") return { num: Infinity, str: "" };
+  if (v === true) return { num: 0, str: "" };
+  if (v === false) return { num: 6, str: "" };
   if (typeof v === "number") return { num: v, str: "" };
   const s = String(v).trim().toLowerCase();
+  if (s === "true" || s === "yes" || s === "y") return { num: 0, str: s };
+  if (s === "false" || s === "no" || s === "n") return { num: 6, str: s };
   if (s in PRI_WORDS) return { num: PRI_WORDS[s], str: s };
   const n = parseFloat(s);
   if (!isNaN(n)) return { num: n, str: s };
@@ -755,9 +762,15 @@ function rowEl(r, compact) {
     tags.appendChild(makeEditChip(hasAsg, "\uFF0B assign", "Edit who's assigned", () => openInlineEditor("asg", r.id)));
   }
   if (state.mapped.priority && !editingPri) {
-    const hasPri = r.priority !== null && r.priority !== undefined && r.priority !== "";
-    if (hasPri) tags.appendChild(Object.assign(el("span", "tag pri"), { textContent: "\u25B2 " + r.priority }));
-    tags.appendChild(makeEditChip(hasPri, "\uFF0B priority", "Edit priority", () => openInlineEditor("pri", r.id)));
+    const important = isImportant(r.priority);
+    const hasPri = r.priority !== null && r.priority !== undefined && r.priority !== "" && r.priority !== false;
+    if (state.priIsBool) {
+      if (important) tags.appendChild(Object.assign(el("span", "tag pri imp"), { textContent: "Important!" }));
+    } else if (hasPri) {
+      tags.appendChild(Object.assign(el("span", "tag pri" + (important ? " imp" : "")), { textContent: "\u25B2 " + r.priority }));
+    }
+    const showVal = state.priIsBool ? important : hasPri;
+    tags.appendChild(makeEditChip(showVal, "\uFF0B priority", "Edit priority", () => openInlineEditor("pri", r.id)));
   }
   if (tags.children.length) main.appendChild(tags);
 
@@ -876,6 +889,24 @@ function categoryEditor(r) {
 function priorityEditor(r) {
   const ed = el("div", "fieldedit");
   ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+
+  if (state.priIsBool) {
+    let on = isImportant(r.priority);
+    const picker = el("div", "picker");
+    const chip = el("div", "pchip" + (on ? " sel" : ""));
+    chip.textContent = "Important!";
+    chip.onclick = (e) => { e.stopPropagation(); on = !on; chip.classList.toggle("sel", on); };
+    picker.appendChild(chip);
+    ed.appendChild(picker);
+    const acts = el("div", "fe-actions");
+    const save = el("button", "fe-save"); save.textContent = "Save";
+    save.onclick = () => { state.editingPriRow = null; writeField(r.id, state.cols.Priority, on, "priority"); render(); };
+    const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
+    cancel.onclick = () => { state.editingPriRow = null; render(); };
+    acts.append(save, cancel); ed.appendChild(acts);
+    return ed;
+  }
+
   const has = r.priority !== null && r.priority !== undefined && r.priority !== "";
   const initial = has ? [String(r.priority)] : [];
   const known = distinctValues(rr => {
@@ -1200,13 +1231,20 @@ function openNewTask(prefillKey) {
   }
   modal.appendChild(row2);
 
-  let statusIn = null, catIn = null, priIn = null, asgPicker = null, descIn = null;
+  let statusIn = null, catIn = null, priIn = null, priBoolIn = null, asgPicker = null, descIn = null;
   if (state.mapped.status) { modal.appendChild(labelEl("Status")); statusIn = datalistInput(statusOptions(), "nt-status"); modal.appendChild(statusIn.wrap); }
   if (state.mapped.category) { modal.appendChild(labelEl("Category")); catIn = datalistInput(distinctValues(recCats).filter(c => c !== NO_CAT), "nt-cat"); modal.appendChild(catIn.wrap); }
   if (state.mapped.priority) {
     modal.appendChild(labelEl("Priority"));
-    const pv = distinctValues(r => { const v = r.priority; return (v === null || v === undefined || v === "") ? [] : [String(v)]; });
-    priIn = datalistInput(pv, "nt-pri"); modal.appendChild(priIn.wrap);
+    if (state.priIsBool) {
+      const prow = el("label", "poprow"); prow.style.padding = "2px 0";
+      priBoolIn = document.createElement("input"); priBoolIn.type = "checkbox";
+      prow.append(priBoolIn, Object.assign(el("span", "label"), { textContent: "Important!" }));
+      modal.appendChild(prow);
+    } else {
+      const pv = distinctValues(r => { const v = r.priority; return (v === null || v === undefined || v === "") ? [] : [String(v)]; });
+      priIn = datalistInput(pv, "nt-pri"); modal.appendChild(priIn.wrap);
+    }
   }
   if (state.mapped.assignedTo) { modal.appendChild(labelEl("Assigned to")); asgPicker = buildTagPicker([], state.asgMulti, distinctValues(recAsgs).filter(v => v !== UNASSIGNED), "name"); modal.appendChild(asgPicker.element); }
   if (state.mapped.description) { modal.appendChild(labelEl("Description")); descIn = document.createElement("textarea"); modal.appendChild(descIn); }
@@ -1222,7 +1260,8 @@ function openNewTask(prefillKey) {
     fields[state.cols.DueDate] = encodeDue(dateIn.value, timeIn ? timeIn.value : null);
     if (statusIn && statusIn.value()) fields[state.cols.Status] = statusIn.value();
     if (catIn && catIn.value()) fields[state.cols.Category] = state.catMulti ? ["L", catIn.value()] : catIn.value();
-    if (priIn && priIn.value()) {
+    if (priBoolIn) { if (priBoolIn.checked) fields[state.cols.Priority] = true; }
+    else if (priIn && priIn.value()) {
       const pv = priIn.value();
       fields[state.cols.Priority] = (pv !== "" && !isNaN(Number(pv))) ? Number(pv) : pv;
     }
@@ -1328,6 +1367,8 @@ async function detectColumnTypes() {
     if (at !== null) { state.asgMulti = isList(at); state.asgTypeKnown = true; }
     const ct = typeOf(state.cols.Category);
     if (ct !== null) { state.catMulti = isList(ct); state.catTypeKnown = true; }
+    const pt = typeOf(state.cols.Priority);
+    if (pt !== null) { state.priIsBool = pt === "Bool"; state.priTypeKnown = true; }
     render();
   } catch (e) { /* keep data-based heuristics */ }
 }
@@ -1403,6 +1444,7 @@ function ingest(records, mappings) {
   if (state.dueTypeFromMeta === null) state.dueIsDateTime = out.some(r => r.due.timed);
   if (!state.asgTypeKnown) state.asgMulti = out.some(r => Array.isArray(r.assignedTo));
   if (!state.catTypeKnown) state.catMulti = out.some(r => Array.isArray(r.category));
+  if (!state.priTypeKnown) state.priIsBool = out.some(r => typeof r.priority === "boolean");
   seedRedCatsIfNeeded();
 }
 
