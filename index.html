@@ -134,6 +134,7 @@
   }
   .chip .t { color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-right: 4px; }
   .chip.chip-complete { background: var(--green-mid); color: var(--green-ink); }
+  .chip.chip-ready { background: var(--green-mid); color: var(--green-ink); }
   .chip.chip-critical { background: var(--red-soft); color: var(--ink); font-weight: 600; }
   .more { font-size: 11px; color: var(--ink-faint); padding-left: 2px; }
 
@@ -215,6 +216,7 @@
   .compactrow .title { font-size: 12px; }
 
   .row.complete { background: var(--green-mid); }
+  .row.ready { background: var(--green-mid); }
   .row.complete .title.done { color: var(--green-ink); }
   .row.critical { background: var(--red-soft); }
 
@@ -354,6 +356,7 @@ const state = {
 };
 
 const COMPLETE_WORDS = new Set(["complete","completed","done","closed","resolved","finished"]);
+const READY_WORDS = new Set(["ready"]);
 const NO_STATUS = "(No status)";
 
 const NO_CAT = "(No category)";
@@ -453,6 +456,12 @@ function isComplete(r) {
   if (s === null || s === undefined) return false;
   return COMPLETE_WORDS.has(String(s).trim().toLowerCase());
 }
+function isReady(r) {
+  if (!state.mapped.status) return false;
+  const s = r.status;
+  if (s === null || s === undefined) return false;
+  return READY_WORDS.has(String(s).trim().toLowerCase());
+}
 function isImportant(v) {
   if (v === null || v === undefined || v === "") return false;
   return priorityRank(v).num <= 1; // highest/critical/urgent/high/important/p0/p1 or numeric <=1
@@ -462,14 +471,15 @@ function isCritical(r) {
   if (state.mapped.category && recCats(r).some(c => state.redCats.has(c))) return true;
   return false;
 }
-// 'complete' (green) wins over 'critical' (red), else 'normal'
+// 'complete' and 'ready' (green) win over 'critical' (red), else 'normal'
 function classify(r) {
   if (isComplete(r)) return "complete";
+  if (isReady(r)) return "ready";
   if (isCritical(r)) return "critical";
   return "normal";
 }
 function stripeColor(r, kind) {
-  if (kind === "complete") return "var(--green)";
+  if (kind === "complete" || kind === "ready") return "var(--green)";
   if (kind === "critical") return "var(--red)";
   const cats = recCats(r);
   return (state.mapped.category && cats[0] !== NO_CAT) ? catColor(cats[0]) : "var(--accent)";
@@ -556,7 +566,7 @@ function renderMeta() {
   const hiddenByFilter = state.records.length - visible;
   if (hiddenByFilter > 0) txt += " &middot; " + hiddenByFilter + " hidden by filters";
   if (state.unscheduled > 0) txt += " &middot; <b>" + state.unscheduled + "</b> with no valid due date (not shown)";
-  if (state.mapped.status) txt += '<span class="lg"><i style="background:var(--green)"></i>complete</span>';
+  if (state.mapped.status) txt += '<span class="lg"><i style="background:var(--green)"></i>complete / ready</span>';
   if (state.mapped.priority || state.mapped.category) txt += '<span class="lg"><i style="background:var(--red)"></i>critical</span>';
   document.getElementById("meta").innerHTML = txt;
 }
@@ -965,7 +975,7 @@ function buildTagPicker(initial, multi, known, noun) {
 function statusControl(r, kind) {
   const wrap = el("div", "statuswrap");
   const has = r.status !== null && r.status !== undefined && String(r.status).trim() !== "";
-  const pill = el("button", "statuspill" + (kind === "complete" ? " is-complete" : ""));
+  const pill = el("button", "statuspill" + (kind === "complete" || kind === "ready" ? " is-complete" : ""));
   pill.innerHTML = esc(has ? String(r.status) : "Set status") + ' <span class="pcaret">&#9662;</span>';
   pill.onclick = (e) => { e.stopPropagation(); const wasOpen = state.openStatusRow === r.id; clearTransient(); state.openStatusRow = wasOpen ? null : r.id; render(); };
   wrap.appendChild(pill);
