@@ -93,13 +93,16 @@
     background: #fff; border: 1px solid var(--line-strong); border-radius: 10px;
     box-shadow: var(--shadow); min-width: 220px; max-width: 300px; padding: 8px;
   }
+  .pophead { display: flex; align-items: flex-start; justify-content: space-between; }
+  .popclose { border: 0; background: transparent; cursor: pointer; font-size: 18px; line-height: 1; color: var(--ink-faint); padding: 2px 6px 6px; }
+  .popclose:hover { color: var(--ink); }
   .popover h4 { margin: 4px 6px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
   .poprow { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 6px; cursor: pointer; }
   .poprow:hover { background: #f3f5f3; }
   .poprow input { margin: 0; }
   .poprow .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .poprow .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
-  .poplist { max-height: 260px; overflow: auto; }
+  .poplist { max-height: min(640px, 72vh); overflow: auto; }
   .popactions { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); margin-top: 4px; }
   .popactions button { flex: 1; border: 1px solid var(--line-strong); background: #fff; border-radius: 6px; padding: 5px; cursor: pointer; font: inherit; color: var(--ink-soft); }
   .popactions button:hover { background: #eef1ef; }
@@ -175,6 +178,10 @@
   .row .time.bare:hover { opacity: 1; }
   .row .time .pen { font-size: 10px; margin-left: 3px; opacity: .45; }
   .row .time.editable:hover .pen { opacity: .9; }
+  .row .daysleft { font-size: 11px; margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .row .daysleft.dl-future { color: var(--ink-faint); }
+  .row .daysleft.dl-today { color: #8a5a12; font-weight: 600; }
+  .row .daysleft.dl-over { color: var(--red); font-weight: 600; }
 
   .dateeditor {
     position: absolute; top: calc(100% + 4px); left: 0; z-index: 60; background: #fff;
@@ -291,6 +298,23 @@
   .m-cancel { background: #fff; color: var(--ink-soft); }
   .m-cancel:hover { background: #eef1ef; }
 
+  /* Needs-attention link + panel */
+  .needattn { color: var(--warn, #9a6b12); cursor: pointer; font-weight: 600; }
+  .needattn:hover { text-decoration: underline; }
+  .ua-sub { color: var(--ink-faint); font-size: 12px; margin: 6px 0 12px; }
+  .ua-list { display: flex; flex-direction: column; gap: 8px; max-height: 56vh; overflow: auto; }
+  .ua-item { border: 1px solid var(--line); border-left: 4px solid var(--warn-line, #e6b366); border-radius: 8px; padding: 9px 10px; background: #fff; }
+  .ua-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .ua-title { font-weight: 600; word-break: break-word; }
+  .ua-reason { font-size: 11px; color: var(--warn, #9a6b12); white-space: nowrap; }
+  .ua-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .ua-fix { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+  .ua-fix input[type=date] { font: inherit; padding: 5px 7px; border: 1px solid var(--line-strong); border-radius: 6px; }
+  .btn-small { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 6px; padding: 5px 11px; cursor: pointer; font: inherit; font-size: 12px; }
+  .btn-small:hover { filter: brightness(1.05); }
+  .btn-small.ghost { background: #fff; color: var(--ink-soft); border-color: var(--line-strong); }
+  .btn-small.ghost:hover { background: #eef1ef; }
+
   /* Messages */
   .notice { padding: 28px; max-width: 460px; margin: 24px auto; text-align: center; color: var(--ink-soft); }
   .notice h2 { font-family: var(--display); color: var(--ink); }
@@ -319,7 +343,6 @@ const state = {
   ready: false,
   haveGrist: typeof grist !== "undefined" && grist && grist.ready,
   records: [],          // parsed + scheduled deadlines
-  unscheduled: 0,       // records with missing/invalid due dates
   mapped: { due: false, title: false, category: false, assignedTo: false, priority: false, status: false, description: false },
   cols: {},             // logical name -> real column id (for write/create)
   statusColId: null,    // real column id of the Status column (for write-back)
@@ -353,6 +376,8 @@ const state = {
   editingCatRow: null,  // rowId whose category editor is open
   editingPriRow: null,  // rowId whose priority editor is open
   expandedRows: new Set(), // rowIds whose full description is shown
+  unplaced: [],         // records with no usable due date (not on the calendar)
+  showUnplaced: false,  // whether the "needs attention" panel is open
 };
 
 const COMPLETE_WORDS = new Set(["complete","completed","done","closed","resolved","finished"]);
@@ -541,7 +566,7 @@ function render() {
       '<div class="notice"><h2>Map your columns</h2><p>In the creator panel on the right, set the widget&rsquo;s column mappings:</p>'
       + '<ol><li><b>Due Date</b> &mdash; a Date or DateTime column (required)</li>'
       + '<li><b>Calendar Title</b> &mdash; the text shown for each deadline (required)</li>'
-      + '<li><b>Status</b>, <b>Description</b>, <b>Category</b>, <b>Assigned To</b>, <b>Priority</b> &mdash; optional</li></ol></div>';
+      + '<li><b>Status</b>, <b>Description</b>, <b>Days Left</b>, <b>Category</b>, <b>Assigned To</b>, <b>Priority</b> &mdash; optional</li></ol></div>';
     return;
   }
 
@@ -550,7 +575,73 @@ function render() {
   else if (state.view === "week") body.innerHTML = "", body.appendChild(renderWeek());
   else body.innerHTML = "", body.appendChild(renderDay());
   adjustClamps();
+  renderUnplacedOverlay();
 }
+
+// Unobtrusive panel listing deadlines that can't be placed (no usable due date), with a quick date fix.
+function renderUnplacedOverlay() {
+  const existing = document.querySelector(".unplaced-overlay");
+  if (existing) existing.remove();
+  if (!state.showUnplaced) return;
+  if (!state.unplaced.length) { state.showUnplaced = false; return; }
+
+  const overlay = el("div", "modal-overlay unplaced-overlay");
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) { state.showUnplaced = false; render(); } });
+  const modal = el("div", "modal");
+  modal.style.maxWidth = "460px";
+  modal.addEventListener("click", e => e.stopPropagation());
+
+  const head = el("div"); head.style.cssText = "display:flex;align-items:baseline;justify-content:space-between;gap:10px;";
+  head.appendChild(Object.assign(el("h3"), { textContent: "\u26A0 Needs attention" }));
+  const count = el("span", "small"); count.style.color = "var(--ink-faint)";
+  count.textContent = state.unplaced.length + " deadline" + (state.unplaced.length === 1 ? "" : "s");
+  head.appendChild(count);
+  modal.appendChild(head);
+  modal.appendChild(Object.assign(el("p", "ua-sub"), { textContent: "These aren't on the calendar because they have no usable due date. Set a date to place one, or open it to edit." }));
+
+  const list = el("div", "ua-list");
+  state.unplaced.forEach(u => list.appendChild(unplacedItem(u)));
+  modal.appendChild(list);
+
+  const acts = el("div", "modal-actions");
+  const done = el("button", "m-create"); done.textContent = "Close";
+  done.onclick = () => { state.showUnplaced = false; render(); };
+  acts.appendChild(done);
+  modal.appendChild(acts);
+
+  overlay.appendChild(modal);
+  document.getElementById("app").appendChild(overlay);
+}
+
+function unplacedItem(u) {
+  const item = el("div", "ua-item");
+  const titleStr = (u.title !== null && u.title !== undefined && String(u.title).trim() !== "") ? String(u.title) : "(untitled)";
+  const top = el("div", "ua-top");
+  top.appendChild(Object.assign(el("div", "ua-title"), { textContent: titleStr }));
+  const reason = el("span", "ua-reason");
+  reason.textContent = u.reason === "no-date" ? "No due date set" : "Due date couldn't be read";
+  top.appendChild(reason);
+  item.appendChild(top);
+
+  // Context chips
+  const chips = el("div", "ua-chips");
+  if (state.mapped.category) toList(u.category).forEach(c => { const t = el("span", "tag cat"); t.style.background = catColor(c); t.textContent = c; chips.appendChild(t); });
+  if (state.mapped.assignedTo) toList(u.assignedTo).forEach(a => chips.appendChild(Object.assign(el("span", "tag asg"), { textContent: a })));
+  if (state.mapped.status && u.status !== null && u.status !== undefined && String(u.status).trim() !== "") chips.appendChild(Object.assign(el("span", "tag"), { textContent: String(u.status) }));
+  if (chips.children.length) item.appendChild(chips);
+
+  // Quick fix: set a due date
+  const fix = el("div", "ua-fix");
+  const dIn = document.createElement("input"); dIn.type = "date"; dIn.value = iso(new Date());
+  const setB = el("button", "btn-small"); setB.textContent = "Set date";
+  setB.onclick = () => { if (!dIn.value) return; setDue(u.id, encodeDue(dIn.value, null)); };
+  const openB = el("button", "btn-small ghost"); openB.textContent = "Open in table";
+  openB.onclick = () => { selectInGrist(u.id); };
+  fix.append(dIn, setB, openB);
+  item.appendChild(fix);
+  return item;
+}
+function iso(d) { return pad4(d.getFullYear()) + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
 
 // Reveal the "Show more" hint only on rows whose description preview is actually clipped.
 function adjustClamps() {
@@ -565,10 +656,14 @@ function renderMeta() {
   let txt = "<b>" + visible + "</b> deadline" + (visible === 1 ? "" : "s") + " shown";
   const hiddenByFilter = state.records.length - visible;
   if (hiddenByFilter > 0) txt += " &middot; " + hiddenByFilter + " hidden by filters";
-  if (state.unscheduled > 0) txt += " &middot; <b>" + state.unscheduled + "</b> with no valid due date (not shown)";
   if (state.mapped.status) txt += '<span class="lg"><i style="background:var(--green)"></i>complete / ready</span>';
   if (state.mapped.priority || state.mapped.category) txt += '<span class="lg"><i style="background:var(--red)"></i>critical</span>';
-  document.getElementById("meta").innerHTML = txt;
+  const n = state.unplaced.length;
+  if (n > 0) txt += ' &middot; <a id="unplaced-link" class="needattn">\u26A0 ' + n + " need" + (n === 1 ? "s" : "") + " attention</a>";
+  const meta = document.getElementById("meta");
+  meta.innerHTML = txt;
+  const link = document.getElementById("unplaced-link");
+  if (link) link.onclick = (e) => { e.stopPropagation(); state.showUnplaced = !state.showUnplaced; render(); };
 }
 
 /* ---- Toolbar ---- */
@@ -630,6 +725,15 @@ function periodLabel() {
   return MONTHS[s.getMonth()].slice(0,3) + " " + s.getDate() + " \u2013 " + MONTHS[e.getMonth()].slice(0,3) + " " + e.getDate() + ", " + e.getFullYear();
 }
 
+function popHeader(titleText) {
+  const h = el("div", "pophead");
+  h.appendChild(Object.assign(el("h4"), { textContent: titleText }));
+  const x = el("button", "popclose"); x.innerHTML = "\u00D7"; x.title = "Close";
+  x.onclick = (e) => { e.stopPropagation(); state.openPopover = null; render(); };
+  h.appendChild(x);
+  return h;
+}
+
 function filterDropdown(id, label, hiddenSet, getter) {
   const wrap = el("div", "dropwrap");
   const values = distinctValues(getter);
@@ -644,7 +748,7 @@ function filterDropdown(id, label, hiddenSet, getter) {
   if (state.openPopover === id) {
     const pop = el("div", "popover");
     pop.onclick = (e) => e.stopPropagation();
-    pop.appendChild(Object.assign(el("h4"), { textContent: "Show " + label.toLowerCase() }));
+    pop.appendChild(popHeader("Show " + label.toLowerCase()));
     const list = el("div", "poplist");
     values.forEach(v => {
       const r = el("label", "poprow");
@@ -681,7 +785,7 @@ function sortDropdown() {
   if (state.openPopover === "sort" && state.mapped.priority) {
     const pop = el("div", "popover");
     pop.onclick = (e) => e.stopPropagation();
-    pop.appendChild(Object.assign(el("h4"), { textContent: "Sort each day" }));
+    pop.appendChild(popHeader("Sort each day"));
 
     const toggle = el("label", "poprow");
     const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = state.sortByPriority;
@@ -715,7 +819,7 @@ function flagsDropdown() {
   if (state.openPopover === "flags") {
     const pop = el("div", "popover");
     pop.onclick = (e) => e.stopPropagation();
-    pop.appendChild(Object.assign(el("h4"), { textContent: "Highlight red (critical categories)" }));
+    pop.appendChild(popHeader("Highlight red (critical categories)"));
     const list = el("div", "poplist");
     const cats = distinctValues(recCats).filter(c => c !== NO_CAT);
     if (!cats.length) list.appendChild(Object.assign(el("div", "empty"), { textContent: "No categories found yet." }));
@@ -1056,6 +1160,17 @@ function dueCell(r, compact) {
     render();
   };
   wrap.appendChild(btn);
+  if (state.mapped.daysLeft && r.daysLeft !== null && r.daysLeft !== undefined && r.daysLeft !== "") {
+    const dl = Number(r.daysLeft);
+    if (Number.isFinite(dl)) {
+      const n = Math.round(dl);
+      let text, cls;
+      if (n === 0) { text = "due today"; cls = "dl-today"; }
+      else if (n > 0) { text = n + " day" + (n === 1 ? "" : "s") + " left"; cls = "dl-future"; }
+      else { const a = Math.abs(n); text = a + " day" + (a === 1 ? "" : "s") + " overdue"; cls = "dl-over"; }
+      wrap.appendChild(Object.assign(el("div", "daysleft " + cls), { textContent: text }));
+    }
+  }
   if (state.openDateRow === r.id) wrap.appendChild(dateEditor(r));
   return wrap;
 }
@@ -1417,6 +1532,7 @@ function ingest(records, mappings) {
     priority: !!mappings.Priority,
     status: !!mappings.Status,
     description: !!mappings.Description,
+    daysLeft: !!mappings.DaysLeft,
   };
   state.cols = {
     DueDate: mappings.DueDate || null,
@@ -1432,10 +1548,21 @@ function ingest(records, mappings) {
   state.descColId = mappings.Description || null;
   state.asgColId = mappings.AssignedTo || null;
   const out = [];
-  let unscheduled = 0;
+  const unplaced = [];
   for (const rec of (records || [])) {
-    const due = parseDue(pick(rec, mappings, "DueDate"));
-    if (!due) { unscheduled++; continue; }
+    const rawDue = pick(rec, mappings, "DueDate");
+    const due = parseDue(rawDue);
+    if (!due) {
+      unplaced.push({
+        id: rec.id,
+        title: pick(rec, mappings, "Title"),
+        status: state.mapped.status ? pick(rec, mappings, "Status") : null,
+        category: state.mapped.category ? pick(rec, mappings, "Category") : null,
+        assignedTo: state.mapped.assignedTo ? pick(rec, mappings, "AssignedTo") : null,
+        reason: (rawDue === null || rawDue === undefined || rawDue === "") ? "no-date" : "bad-date",
+      });
+      continue;
+    }
     out.push({
       id: rec.id,
       due,
@@ -1446,10 +1573,11 @@ function ingest(records, mappings) {
       priority: state.mapped.priority ? pick(rec, mappings, "Priority") : null,
       status: state.mapped.status ? pick(rec, mappings, "Status") : null,
       description: state.mapped.description ? pick(rec, mappings, "Description") : null,
+      daysLeft: state.mapped.daysLeft ? pick(rec, mappings, "DaysLeft") : null,
     });
   }
   state.records = out;
-  state.unscheduled = unscheduled;
+  state.unplaced = unplaced;
   // Provisional types from data until metadata resolves them.
   if (state.dueTypeFromMeta === null) state.dueIsDateTime = out.some(r => r.due.timed);
   if (!state.asgTypeKnown) state.asgMulti = out.some(r => Array.isArray(r.assignedTo));
@@ -1482,6 +1610,7 @@ if (state.haveGrist) {
       { name: "Title", title: "Calendar Title", type: "Any", description: "Text shown for each deadline." },
       { name: "Status", title: "Status", type: "Choice,Text", optional: true, description: "e.g. Complete / Incomplete / Ready. Editable from the calendar; Complete/Done/Closed turn the deadline green." },
       { name: "Description", title: "Description", type: "Text,Any", optional: true, description: "A longer note. Shown clipped under each deadline in the list views; click the row to expand the full text." },
+      { name: "DaysLeft", title: "Days Left", type: "Int,Numeric,Any", optional: true, description: "A formula column giving days until the deadline (negative once overdue). Shown under the due date in the list views." },
       { name: "Category", title: "Category", type: "Choice,ChoiceList,Text", optional: true, description: "Used for coloring, the Categories filter, and the critical (red) Flags list." },
       { name: "AssignedTo", title: "Assigned To", type: "Choice,ChoiceList,Text", optional: true, description: "One or more team members; powers the Assigned filter." },
       { name: "Priority", title: "Priority", type: "Any", optional: true, description: "Number or choice (e.g. High/Medium/Low). High/important values turn the deadline red; also used for optional priority sorting." },
