@@ -6,298 +6,297 @@
 <title>Deadline Calendar — Grist Widget</title>
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <style>
-:root {
---bg: #ffffff;
---panel: #fbfbfa;
---ink: #1d2b2a;
---ink-soft: #5a6968;
---ink-faint: #8a9695;
---line: #e6e8e6;
---line-strong: #d3d7d4;
---accent: #1a7f6b;
---accent-soft: #e7f3f0;
---today: #fff5e8;
---today-line: #e6b366;
---selected: #e7f3f0;
---danger: #b4452f;
---green: #1f9d57;
---green-soft: #e8f6ed;
---green-mid: #c4e7d1;
---green-ink: #15663a;
---green-line: #bfe6cd;
---red: #c23b22;
---red-soft: #fbecea;
---radius: 8px;
---shadow: 0 1px 2px rgba(20,40,38,.06), 0 6px 20px rgba(20,40,38,.07);
---ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
---display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-}
-* { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
-body {
-font-family: var(--ui);
-color: var(--ink);
-background: var(--bg);
-font-size: 13px;
-line-height: 1.4;
--webkit-font-smoothing: antialiased;
-}
-#app { display: flex; flex-direction: column; height: 100vh; min-height: 0; }
+  :root {
+    --bg: #ffffff;
+    --panel: #fbfbfa;
+    --ink: #1d2b2a;
+    --ink-soft: #5a6968;
+    --ink-faint: #8a9695;
+    --line: #e6e8e6;
+    --line-strong: #d3d7d4;
+    --accent: #1a7f6b;
+    --accent-soft: #e7f3f0;
+    --today: #fff5e8;
+    --today-line: #e6b366;
+    --selected: #e7f3f0;
+    --danger: #b4452f;
+    --green: #1f9d57;
+    --green-soft: #e8f6ed;
+    --green-mid: #c4e7d1;
+    --green-ink: #15663a;
+    --green-line: #bfe6cd;
+    --red: #c23b22;
+    --red-soft: #fbecea;
+    --radius: 8px;
+    --shadow: 0 1px 2px rgba(20,40,38,.06), 0 6px 20px rgba(20,40,38,.07);
+    --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: var(--ui);
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 13px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+  #app { display: flex; flex-direction: column; height: 100vh; min-height: 0; }
 
-/* ---- Toolbar ---- */
-.toolbar {
-display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-padding: 9px 12px; border-bottom: 1px solid var(--line);
-background: var(--panel);
-}
-.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }
-.seg button {
-border: 0; background: transparent; padding: 6px 12px; font: inherit; cursor: pointer;
-color: var(--ink-soft); border-right: 1px solid var(--line-strong);
-}
-.seg button:last-child { border-right: 0; }
-.seg button.active { background: var(--accent); color: #fff; }
-.seg button:not(.active):hover { background: #eef1ef; }
+  /* ---- Toolbar ---- */
+  .toolbar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 9px 12px; border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }
+  .seg button {
+    border: 0; background: transparent; padding: 6px 12px; font: inherit; cursor: pointer;
+    color: var(--ink-soft); border-right: 1px solid var(--line-strong);
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button.active { background: var(--accent); color: #fff; }
+  .seg button:not(.active):hover { background: #eef1ef; }
 
-.nav { display: inline-flex; align-items: center; gap: 4px; }
-.iconbtn {
-border: 1px solid var(--line-strong); background: #fff; border-radius: var(--radius);
-width: 30px; height: 30px; cursor: pointer; color: var(--ink-soft); font-size: 15px; line-height: 1;
-}
-.iconbtn:hover { background: #eef1ef; }
-.todaybtn {
-border: 1px solid var(--line-strong); background: #fff; border-radius: var(--radius);
-padding: 6px 12px; cursor: pointer; font: inherit; color: var(--ink-soft);
-}
-.todaybtn:hover { background: #eef1ef; }
+  .nav { display: inline-flex; align-items: center; gap: 4px; }
+  .iconbtn {
+    border: 1px solid var(--line-strong); background: #fff; border-radius: var(--radius);
+    width: 30px; height: 30px; cursor: pointer; color: var(--ink-soft); font-size: 15px; line-height: 1;
+  }
+  .iconbtn:hover { background: #eef1ef; }
+  .todaybtn {
+    border: 1px solid var(--line-strong); background: #fff; border-radius: var(--radius);
+    padding: 6px 12px; cursor: pointer; font: inherit; color: var(--ink-soft);
+  }
+  .todaybtn:hover { background: #eef1ef; }
 
-.period {
-font-family: var(--display); font-size: 18px; font-weight: 600; letter-spacing: .2px;
-margin: 0 4px; white-space: nowrap;
-}
-.spacer { flex: 1 1 auto; }
+  .period {
+    font-family: var(--display); font-size: 18px; font-weight: 600; letter-spacing: .2px;
+    margin: 0 4px; white-space: nowrap;
+  }
+  .spacer { flex: 1 1 auto; }
 
-.dropwrap { position: relative; }
-.dropbtn {
-border: 1px solid var(--line-strong); background: #fff; border-radius: var(--radius);
-padding: 6px 11px; cursor: pointer; font: inherit; color: var(--ink-soft);
-display: inline-flex; align-items: center; gap: 6px;
-}
-.dropbtn:hover { background: #eef1ef; }
-.dropbtn[disabled] { opacity: .4; cursor: not-allowed; }
-.dropbtn .dot { background: var(--accent); color: #fff; border-radius: 20px; font-size: 11px; padding: 0 6px; }
-.caret { color: var(--ink-faint); font-size: 10px; }
+  .dropwrap { position: relative; }
+  .dropbtn {
+    border: 1px solid var(--line-strong); background: #fff; border-radius: var(--radius);
+    padding: 6px 11px; cursor: pointer; font: inherit; color: var(--ink-soft);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .dropbtn:hover { background: #eef1ef; }
+  .dropbtn[disabled] { opacity: .4; cursor: not-allowed; }
+  .dropbtn .dot { background: var(--accent); color: #fff; border-radius: 20px; font-size: 11px; padding: 0 6px; }
+  .caret { color: var(--ink-faint); font-size: 10px; }
 
-.popover {
-position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
-background: #fff; border: 1px solid var(--line-strong); border-radius: 10px;
-box-shadow: var(--shadow); min-width: 220px; max-width: 300px; padding: 8px;
-}
+  .popover {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 10px;
+    box-shadow: var(--shadow); min-width: 220px; max-width: 300px; padding: 8px;
+  }
   .pophead { display: flex; align-items: flex-start; justify-content: space-between; }
   .popclose { border: 0; background: transparent; cursor: pointer; font-size: 18px; line-height: 1; color: var(--ink-faint); padding: 2px 6px 6px; }
   .popclose:hover { color: var(--ink); }
-.popover h4 { margin: 4px 6px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
-.poprow { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 6px; cursor: pointer; }
-.poprow:hover { background: #f3f5f3; }
-.poprow input { margin: 0; }
-.poprow .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.poprow .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
-  .poplist { max-height: 260px; overflow: auto; }
+  .popover h4 { margin: 4px 6px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
+  .poprow { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 6px; cursor: pointer; }
+  .poprow:hover { background: #f3f5f3; }
+  .poprow input { margin: 0; }
+  .poprow .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .poprow .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
   .poplist { max-height: min(640px, 72vh); overflow: auto; }
-.popactions { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); margin-top: 4px; }
-.popactions button { flex: 1; border: 1px solid var(--line-strong); background: #fff; border-radius: 6px; padding: 5px; cursor: pointer; font: inherit; color: var(--ink-soft); }
-.popactions button:hover { background: #eef1ef; }
-.radio-row { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 6px; cursor: pointer; }
-.radio-row:hover { background: #f3f5f3; }
+  .popactions { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); margin-top: 4px; }
+  .popactions button { flex: 1; border: 1px solid var(--line-strong); background: #fff; border-radius: 6px; padding: 5px; cursor: pointer; font: inherit; color: var(--ink-soft); }
+  .popactions button:hover { background: #eef1ef; }
+  .radio-row { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 6px; cursor: pointer; }
+  .radio-row:hover { background: #f3f5f3; }
 
-/* ---- Body ---- */
-.body { flex: 1 1 auto; min-height: 0; overflow: auto; }
-.meta { padding: 6px 12px; color: var(--ink-faint); font-size: 12px; border-bottom: 1px solid var(--line); }
-.meta b { color: var(--ink-soft); font-weight: 600; }
+  /* ---- Body ---- */
+  .body { flex: 1 1 auto; min-height: 0; overflow: auto; }
+  .meta { padding: 6px 12px; color: var(--ink-faint); font-size: 12px; border-bottom: 1px solid var(--line); }
+  .meta b { color: var(--ink-soft); font-weight: 600; }
 
-/* Month grid */
-.month { display: flex; flex-direction: column; min-height: 100%; }
-.weekhead { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--line); }
-.weekhead div { padding: 7px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); text-align: left; }
-.grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; flex: 1; }
-.cell {
-border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
-padding: 5px 6px; min-height: 96px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; overflow: hidden;
-}
-.cell:nth-child(7n) { border-right: 0; }
-.cell.outside { background: #e9ebe8; }
-.cell.outside .daynum { color: var(--ink-faint); }
-.cell.today { background: var(--today); box-shadow: inset 0 0 0 1px var(--today-line); }
-.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--accent); }
-.cell:hover { background: #f1f5f3; }
-.daynum { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
-.chip {
-font-size: 11px; padding: 1px 6px; border-radius: 5px; background: var(--accent-soft);
-color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-border-left: 3px solid var(--accent);
-}
-.chip .t { color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-right: 4px; }
-.chip.chip-complete { background: var(--green-mid); color: var(--green-ink); }
-.chip.chip-ready { background: var(--green-mid); color: var(--green-ink); }
-.chip.chip-critical { background: var(--red-soft); color: var(--ink); font-weight: 600; }
-.more { font-size: 11px; color: var(--ink-faint); padding-left: 2px; }
+  /* Month grid */
+  .month { display: flex; flex-direction: column; min-height: 100%; }
+  .weekhead { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--line); }
+  .weekhead div { padding: 7px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); text-align: left; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; flex: 1; }
+  .cell {
+    border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    padding: 5px 6px; min-height: 96px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; overflow: hidden;
+  }
+  .cell:nth-child(7n) { border-right: 0; }
+  .cell.outside { background: #e9ebe8; }
+  .cell.outside .daynum { color: var(--ink-faint); }
+  .cell.today { background: var(--today); box-shadow: inset 0 0 0 1px var(--today-line); }
+  .cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--accent); }
+  .cell:hover { background: #f1f5f3; }
+  .daynum { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+  .chip {
+    font-size: 11px; padding: 1px 6px; border-radius: 5px; background: var(--accent-soft);
+    color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    border-left: 3px solid var(--accent);
+  }
+  .chip .t { color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-right: 4px; }
+  .chip.chip-complete { background: var(--green-mid); color: var(--green-ink); }
+  .chip.chip-ready { background: var(--green-mid); color: var(--green-ink); }
+  .chip.chip-critical { background: var(--red-soft); color: var(--ink); font-weight: 600; }
+  .more { font-size: 11px; color: var(--ink-faint); padding-left: 2px; }
 
-.daypanel { border-top: 2px solid var(--line-strong); background: var(--panel); }
-.daypanel h3 { font-family: var(--display); font-size: 16px; margin: 0; padding: 12px 14px 6px; }
+  .daypanel { border-top: 2px solid var(--line-strong); background: var(--panel); }
+  .daypanel h3 { font-family: var(--display); font-size: 16px; margin: 0; padding: 12px 14px 6px; }
 
-/* Week */
-.week { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); min-height: 100%; }
-.weekcol { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
-.weekcol:last-child { border-right: 0; }
-.weekcol .colhead {
-padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: pointer; position: sticky; top: 0; background: var(--panel); z-index: 1;
-}
-.weekcol .colhead:hover { background: #eef1ef; }
-.weekcol.today .colhead { background: var(--today); box-shadow: inset 0 0 0 1px var(--today-line); }
-.weekcol.selected .colhead { background: var(--selected); box-shadow: inset 0 0 0 2px var(--accent); }
-.colhead .dow { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
-.colhead .dnum { font-family: var(--display); font-size: 17px; }
-.colbody { padding: 6px; display: flex; flex-direction: column; gap: 6px; }
+  /* Week */
+  .week { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); min-height: 100%; }
+  .weekcol { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .weekcol:last-child { border-right: 0; }
+  .weekcol .colhead {
+    padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: pointer; position: sticky; top: 0; background: var(--panel); z-index: 1;
+  }
+  .weekcol .colhead:hover { background: #eef1ef; }
+  .weekcol.today .colhead { background: var(--today); box-shadow: inset 0 0 0 1px var(--today-line); }
+  .weekcol.selected .colhead { background: var(--selected); box-shadow: inset 0 0 0 2px var(--accent); }
+  .colhead .dow { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
+  .colhead .dnum { font-family: var(--display); font-size: 17px; }
+  .colbody { padding: 6px; display: flex; flex-direction: column; gap: 6px; }
 
-/* Day list rows (shared by day view + month day-panel + week columns) */
-.list { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
-.row {
-display: flex; gap: 10px; align-items: flex-start; padding: 9px 10px;
-border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer;
-border-left-width: 4px;
-}
-.row:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
-.row .duewrap { position: relative; flex: none; }
-.row .time {
-font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 12px; min-width: 64px; padding: 1px 3px 0 0;
-border: 0; background: transparent; font-family: inherit; text-align: left; cursor: pointer; border-radius: 5px;
-text-decoration: underline dotted; text-decoration-color: var(--line-strong); text-underline-offset: 2px;
-}
-.row .time.none { color: var(--ink-faint); }
-.row .time.editable:hover { color: var(--accent); text-decoration-color: var(--accent); }
-.row .time.bare { text-decoration: none; min-width: 0; opacity: .65; }
-.row .time.bare:hover { opacity: 1; }
-.row .time .pen { font-size: 10px; margin-left: 3px; opacity: .45; }
-.row .time.editable:hover .pen { opacity: .9; }
+  /* Day list rows (shared by day view + month day-panel + week columns) */
+  .list { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .row {
+    display: flex; gap: 10px; align-items: flex-start; padding: 9px 10px;
+    border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer;
+    border-left-width: 4px;
+  }
+  .row:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
+  .row .duewrap { position: relative; flex: none; }
+  .row .time {
+    font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 12px; min-width: 64px; padding: 1px 3px 0 0;
+    border: 0; background: transparent; font-family: inherit; text-align: left; cursor: pointer; border-radius: 5px;
+    text-decoration: underline dotted; text-decoration-color: var(--line-strong); text-underline-offset: 2px;
+  }
+  .row .time.none { color: var(--ink-faint); }
+  .row .time.editable:hover { color: var(--accent); text-decoration-color: var(--accent); }
+  .row .time.bare { text-decoration: none; min-width: 0; opacity: .65; }
+  .row .time.bare:hover { opacity: 1; }
+  .row .time .pen { font-size: 10px; margin-left: 3px; opacity: .45; }
+  .row .time.editable:hover .pen { opacity: .9; }
   .row .daysleft { font-size: 11px; margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .row .daysleft.dl-future { color: var(--ink-faint); }
   .row .daysleft.dl-today { color: #8a5a12; font-weight: 600; }
   .row .daysleft.dl-over { color: var(--red); font-weight: 600; }
 
-.dateeditor {
-position: absolute; top: calc(100% + 4px); left: 0; z-index: 60; background: #fff;
-border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: var(--shadow);
-padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 190px;
-}
-.dateeditor input { font: inherit; padding: 5px 6px; border: 1px solid var(--line-strong); border-radius: 6px; }
-.de-shortcuts { display: flex; flex-wrap: wrap; gap: 5px; }
-.de-shortcuts button {
-border: 1px solid var(--line-strong); background: #f6f8f6; border-radius: 20px;
-padding: 3px 10px; font: inherit; font-size: 11px; cursor: pointer; color: var(--ink-soft);
-}
-.de-shortcuts button:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-.de-actions { display: flex; gap: 6px; }
-.de-actions button { flex: 1; border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px; cursor: pointer; font: inherit; }
-.de-save { background: var(--accent); color: #fff; border-color: var(--accent) !important; }
-.de-save:hover { filter: brightness(1.05); }
-.de-cancel { background: #fff; color: var(--ink-soft); }
-.de-cancel:hover { background: #eef1ef; }
+  .dateeditor {
+    position: absolute; top: calc(100% + 4px); left: 0; z-index: 60; background: #fff;
+    border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: var(--shadow);
+    padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 190px;
+  }
+  .dateeditor input { font: inherit; padding: 5px 6px; border: 1px solid var(--line-strong); border-radius: 6px; }
+  .de-shortcuts { display: flex; flex-wrap: wrap; gap: 5px; }
+  .de-shortcuts button {
+    border: 1px solid var(--line-strong); background: #f6f8f6; border-radius: 20px;
+    padding: 3px 10px; font: inherit; font-size: 11px; cursor: pointer; color: var(--ink-soft);
+  }
+  .de-shortcuts button:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .de-actions { display: flex; gap: 6px; }
+  .de-actions button { flex: 1; border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px; cursor: pointer; font: inherit; }
+  .de-save { background: var(--accent); color: #fff; border-color: var(--accent) !important; }
+  .de-save:hover { filter: brightness(1.05); }
+  .de-cancel { background: #fff; color: var(--ink-soft); }
+  .de-cancel:hover { background: #eef1ef; }
 
-.row .main { flex: 1; min-width: 0; }
-.row .title { font-weight: 600; font-size: 13px; word-break: break-word; }
-.row .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
-.row .desc {
-font-size: 12px; color: var(--ink-soft); margin-top: 5px; white-space: pre-wrap; overflow-wrap: anywhere;
-display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
-}
-.row .desc.full { display: block; -webkit-line-clamp: none; overflow: visible; }
-.row .descmore { display: none; font-size: 11px; color: var(--accent); margin-top: 3px; user-select: none; }
-.row.expanded .descmore, .row.truncated .descmore { display: inline-block; }
-.tag { font-size: 11px; padding: 1px 7px; border-radius: 20px; background: #f0f2f0; color: var(--ink-soft); }
-.tag.cat { color: #fff; }
-.tag.asg::before { content: "@"; opacity: .6; margin-right: 1px; }
-.tag.pri { border: 1px solid var(--line-strong); background: #fff; }
-.tag.pri.imp { background: var(--red-soft); border-color: #e6b3a8; color: var(--red); font-weight: 600; }
-.compactrow { flex-direction: column; align-items: stretch; gap: 4px; padding: 7px 9px; border-radius: 7px; }
-.compactrow .duewrap { align-self: flex-start; }
-.compactrow .statuswrap { margin-left: 0; align-self: flex-start; }
-.compactrow .title { font-size: 12px; }
+  .row .main { flex: 1; min-width: 0; }
+  .row .title { font-weight: 600; font-size: 13px; word-break: break-word; }
+  .row .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  .row .desc {
+    font-size: 12px; color: var(--ink-soft); margin-top: 5px; white-space: pre-wrap; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  }
+  .row .desc.full { display: block; -webkit-line-clamp: none; overflow: visible; }
+  .row .descmore { display: none; font-size: 11px; color: var(--accent); margin-top: 3px; user-select: none; }
+  .row.expanded .descmore, .row.truncated .descmore { display: inline-block; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 20px; background: #f0f2f0; color: var(--ink-soft); }
+  .tag.cat { color: #fff; }
+  .tag.asg::before { content: "@"; opacity: .6; margin-right: 1px; }
+  .tag.pri { border: 1px solid var(--line-strong); background: #fff; }
+  .tag.pri.imp { background: var(--red-soft); border-color: #e6b3a8; color: var(--red); font-weight: 600; }
+  .compactrow { flex-direction: column; align-items: stretch; gap: 4px; padding: 7px 9px; border-radius: 7px; }
+  .compactrow .duewrap { align-self: flex-start; }
+  .compactrow .statuswrap { margin-left: 0; align-self: flex-start; }
+  .compactrow .title { font-size: 12px; }
 
-.row.complete { background: var(--green-mid); }
-.row.ready { background: var(--green-mid); }
-.row.complete .title.done { color: var(--green-ink); }
-.row.critical { background: var(--red-soft); }
+  .row.complete { background: var(--green-mid); }
+  .row.ready { background: var(--green-mid); }
+  .row.complete .title.done { color: var(--green-ink); }
+  .row.critical { background: var(--red-soft); }
 
-/* Status control */
-.statuswrap { position: relative; flex: none; margin-left: auto; }
-.statuspill {
-border: 1px solid var(--line-strong); background: #fff; border-radius: 20px;
-padding: 3px 11px; font: inherit; font-size: 11px; cursor: pointer; color: var(--ink-soft); white-space: nowrap;
-}
-.statuspill:hover { background: #eef1ef; }
-.statuspill.is-complete { background: var(--green-soft); border-color: var(--green-line); color: var(--green-ink); }
-.statuspill .pcaret { color: var(--ink-faint); font-size: 9px; margin-left: 4px; }
-.statusmenu {
-position: absolute; top: calc(100% + 4px); right: 0; z-index: 60; background: #fff;
-border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: var(--shadow); min-width: 150px; padding: 4px;
-}
-.statusitem {
-display: block; width: 100%; text-align: left; border: 0; background: transparent;
-padding: 6px 10px; border-radius: 6px; font: inherit; cursor: pointer; color: var(--ink);
-}
-.statusitem:hover { background: #f3f5f3; }
-.statusitem.current { font-weight: 600; color: var(--accent); }
-.statusitem.clear { color: var(--ink-faint); border-top: 1px solid var(--line); margin-top: 4px; }
+  /* Status control */
+  .statuswrap { position: relative; flex: none; margin-left: auto; }
+  .statuspill {
+    border: 1px solid var(--line-strong); background: #fff; border-radius: 20px;
+    padding: 3px 11px; font: inherit; font-size: 11px; cursor: pointer; color: var(--ink-soft); white-space: nowrap;
+  }
+  .statuspill:hover { background: #eef1ef; }
+  .statuspill.is-complete { background: var(--green-soft); border-color: var(--green-line); color: var(--green-ink); }
+  .statuspill .pcaret { color: var(--ink-faint); font-size: 9px; margin-left: 4px; }
+  .statusmenu {
+    position: absolute; top: calc(100% + 4px); right: 0; z-index: 60; background: #fff;
+    border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: var(--shadow); min-width: 150px; padding: 4px;
+  }
+  .statusitem {
+    display: block; width: 100%; text-align: left; border: 0; background: transparent;
+    padding: 6px 10px; border-radius: 6px; font: inherit; cursor: pointer; color: var(--ink);
+  }
+  .statusitem:hover { background: #f3f5f3; }
+  .statusitem.current { font-weight: 600; color: var(--accent); }
+  .statusitem.clear { color: var(--ink-faint); border-top: 1px solid var(--line); margin-top: 4px; }
 
-.lg { margin-left: 12px; color: var(--ink-faint); white-space: nowrap; }
-.lg i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .lg { margin-left: 12px; color: var(--ink-faint); white-space: nowrap; }
+  .lg i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
 
-.empty { color: var(--ink-faint); padding: 14px; font-style: italic; }
+  .empty { color: var(--ink-faint); padding: 14px; font-style: italic; }
 
-/* Inline field editors (description, assignee) */
-.fieldedit { margin-top: 6px; display: flex; flex-direction: column; gap: 6px; background: #fff; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px; }
-.fieldedit textarea { font: inherit; min-height: 64px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px; width: 100%; box-sizing: border-box; }
-.fe-actions { display: flex; gap: 6px; }
-.fe-actions button { border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px 12px; cursor: pointer; font: inherit; }
-.fe-save { background: var(--accent); color: #fff; border-color: var(--accent) !important; }
-.fe-save:hover { filter: brightness(1.05); }
-.fe-cancel { background: #fff; color: var(--ink-soft); }
-.fe-cancel:hover { background: #eef1ef; }
-.editlink { font-size: 11px; color: var(--accent); cursor: pointer; user-select: none; margin-top: 4px; display: inline-block; }
-.editlink:hover { text-decoration: underline; }
-.addnote { font-size: 11px; color: var(--ink-faint); cursor: pointer; margin-top: 5px; display: inline-block; user-select: none; }
-.addnote:hover { color: var(--accent); }
-.tag.editchip { background: #fff; border: 1px dashed var(--line-strong); color: var(--ink-faint); cursor: pointer; }
-.tag.editchip:hover { color: var(--accent); border-color: var(--accent); }
+  /* Inline field editors (description, assignee) */
+  .fieldedit { margin-top: 6px; display: flex; flex-direction: column; gap: 6px; background: #fff; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px; }
+  .fieldedit textarea { font: inherit; min-height: 64px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px; width: 100%; box-sizing: border-box; }
+  .fe-actions { display: flex; gap: 6px; }
+  .fe-actions button { border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px 12px; cursor: pointer; font: inherit; }
+  .fe-save { background: var(--accent); color: #fff; border-color: var(--accent) !important; }
+  .fe-save:hover { filter: brightness(1.05); }
+  .fe-cancel { background: #fff; color: var(--ink-soft); }
+  .fe-cancel:hover { background: #eef1ef; }
+  .editlink { font-size: 11px; color: var(--accent); cursor: pointer; user-select: none; margin-top: 4px; display: inline-block; }
+  .editlink:hover { text-decoration: underline; }
+  .addnote { font-size: 11px; color: var(--ink-faint); cursor: pointer; margin-top: 5px; display: inline-block; user-select: none; }
+  .addnote:hover { color: var(--accent); }
+  .tag.editchip { background: #fff; border: 1px dashed var(--line-strong); color: var(--ink-faint); cursor: pointer; }
+  .tag.editchip:hover { color: var(--accent); border-color: var(--accent); }
 
-/* Assignee picker (shared by inline editor + new-task modal) */
-.picker { display: flex; flex-wrap: wrap; gap: 6px; }
-.pchip { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--line-strong); background: #fff; color: var(--ink-soft); cursor: pointer; }
-.pchip.sel { background: var(--accent); color: #fff; border-color: var(--accent); }
-.padd { display: flex; gap: 6px; margin-top: 6px; }
-.padd input { flex: 1; font: inherit; padding: 5px 6px; border: 1px solid var(--line-strong); border-radius: 6px; min-width: 0; }
-.padd button { border: 1px solid var(--line-strong); background: #f6f8f6; border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; }
-.padd button:hover { background: var(--accent-soft); }
+  /* Assignee picker (shared by inline editor + new-task modal) */
+  .picker { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pchip { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--line-strong); background: #fff; color: var(--ink-soft); cursor: pointer; }
+  .pchip.sel { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .padd { display: flex; gap: 6px; margin-top: 6px; }
+  .padd input { flex: 1; font: inherit; padding: 5px 6px; border: 1px solid var(--line-strong); border-radius: 6px; min-width: 0; }
+  .padd button { border: 1px solid var(--line-strong); background: #f6f8f6; border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; }
+  .padd button:hover { background: var(--accent-soft); }
 
-/* New-deadline button + modal */
-.newbtn { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: var(--radius); padding: 6px 13px; cursor: pointer; font: inherit; font-weight: 600; }
-.newbtn:hover { filter: brightness(1.06); }
-.addday { border: 1px solid var(--line-strong); background: #fff; color: var(--accent); border-radius: 6px; padding: 3px 10px; cursor: pointer; font: inherit; font-size: 12px; margin: 8px 14px 2px; }
-.addday:hover { background: var(--accent-soft); }
-.modal-overlay { position: fixed; inset: 0; background: rgba(20,30,28,.4); display: flex; align-items: flex-start; justify-content: center; z-index: 200; padding: 22px 12px; overflow: auto; }
-.modal { background: #fff; border-radius: 12px; box-shadow: var(--shadow); width: 100%; max-width: 380px; padding: 16px 18px 18px; }
-.modal h3 { font-family: var(--display); margin: 0 0 6px; font-size: 19px; }
-.modal label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); margin: 11px 0 3px; }
-.modal input[type=text], .modal input[type=date], .modal input[type=time], .modal textarea { width: 100%; font: inherit; padding: 7px 8px; border: 1px solid var(--line-strong); border-radius: 7px; box-sizing: border-box; }
-.modal textarea { min-height: 58px; resize: vertical; }
-.modal .row2 { display: flex; gap: 8px; }
-.modal .row2 > div { flex: 1; }
-.modal-actions { display: flex; gap: 8px; margin-top: 18px; }
-.modal-actions button { flex: 1; border: 1px solid var(--line-strong); border-radius: 8px; padding: 9px; cursor: pointer; font: inherit; }
-.m-create { background: var(--accent); color: #fff; border-color: var(--accent) !important; font-weight: 600; }
-.m-create:hover { filter: brightness(1.05); }
-.m-cancel { background: #fff; color: var(--ink-soft); }
-.m-cancel:hover { background: #eef1ef; }
+  /* New-deadline button + modal */
+  .newbtn { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: var(--radius); padding: 6px 13px; cursor: pointer; font: inherit; font-weight: 600; }
+  .newbtn:hover { filter: brightness(1.06); }
+  .addday { border: 1px solid var(--line-strong); background: #fff; color: var(--accent); border-radius: 6px; padding: 3px 10px; cursor: pointer; font: inherit; font-size: 12px; margin: 8px 14px 2px; }
+  .addday:hover { background: var(--accent-soft); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(20,30,28,.4); display: flex; align-items: flex-start; justify-content: center; z-index: 200; padding: 22px 12px; overflow: auto; }
+  .modal { background: #fff; border-radius: 12px; box-shadow: var(--shadow); width: 100%; max-width: 380px; padding: 16px 18px 18px; }
+  .modal h3 { font-family: var(--display); margin: 0 0 6px; font-size: 19px; }
+  .modal label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); margin: 11px 0 3px; }
+  .modal input[type=text], .modal input[type=date], .modal input[type=time], .modal textarea { width: 100%; font: inherit; padding: 7px 8px; border: 1px solid var(--line-strong); border-radius: 7px; box-sizing: border-box; }
+  .modal textarea { min-height: 58px; resize: vertical; }
+  .modal .row2 { display: flex; gap: 8px; }
+  .modal .row2 > div { flex: 1; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+  .modal-actions button { flex: 1; border: 1px solid var(--line-strong); border-radius: 8px; padding: 9px; cursor: pointer; font: inherit; }
+  .m-create { background: var(--accent); color: #fff; border-color: var(--accent) !important; font-weight: 600; }
+  .m-create:hover { filter: brightness(1.05); }
+  .m-cancel { background: #fff; color: var(--ink-soft); }
+  .m-cancel:hover { background: #eef1ef; }
 
   /* Needs-attention link + panel */
   .needattn { color: var(--warn, #9a6b12); cursor: pointer; font-weight: 600; }
@@ -316,23 +315,23 @@ padding: 6px 10px; border-radius: 6px; font: inherit; cursor: pointer; color: va
   .btn-small.ghost { background: #fff; color: var(--ink-soft); border-color: var(--line-strong); }
   .btn-small.ghost:hover { background: #eef1ef; }
 
-/* Messages */
-.notice { padding: 28px; max-width: 460px; margin: 24px auto; text-align: center; color: var(--ink-soft); }
-.notice h2 { font-family: var(--display); color: var(--ink); }
-.notice code { background: #f0f2f0; padding: 1px 5px; border-radius: 4px; }
-.notice ol { text-align: left; line-height: 1.7; }
+  /* Messages */
+  .notice { padding: 28px; max-width: 460px; margin: 24px auto; text-align: center; color: var(--ink-soft); }
+  .notice h2 { font-family: var(--display); color: var(--ink); }
+  .notice code { background: #f0f2f0; padding: 1px 5px; border-radius: 4px; }
+  .notice ol { text-align: left; line-height: 1.7; }
 
-@media (max-width: 640px) {
-.period { font-size: 15px; }
-.week { grid-template-columns: repeat(7, minmax(130px, 1fr)); }
-}
+  @media (max-width: 640px) {
+    .period { font-size: 15px; }
+    .week { grid-template-columns: repeat(7, minmax(130px, 1fr)); }
+  }
 </style>
 </head>
 <body>
 <div id="app">
-<div class="toolbar" id="toolbar"></div>
-<div class="meta" id="meta"></div>
-<div class="body" id="body"></div>
+  <div class="toolbar" id="toolbar"></div>
+  <div class="meta" id="meta"></div>
+  <div class="body" id="body"></div>
 </div>
 
 <script>
@@ -341,43 +340,42 @@ padding: 6px 10px; border-radius: 6px; font: inherit; cursor: pointer; color: va
 /* ===================== State ===================== */
 const today = new Date();
 const state = {
-ready: false,
-haveGrist: typeof grist !== "undefined" && grist && grist.ready,
-records: [],          // parsed + scheduled deadlines
-  unscheduled: 0,       // records with missing/invalid due dates
-mapped: { due: false, title: false, category: false, assignedTo: false, priority: false, status: false, description: false },
-cols: {},             // logical name -> real column id (for write/create)
-statusColId: null,    // real column id of the Status column (for write-back)
-dueColId: null,       // real column id of the Due Date column (for write-back)
-descColId: null,
-asgColId: null,
-dueIsDateTime: false, // whether the due column carries a time component
-dueTypeFromMeta: null,// resolved column type from metadata (null until known)
-asgMulti: false,      // Assigned To holds multiple values (ChoiceList)
-asgTypeKnown: false,
-catMulti: false,      // Category holds multiple values (ChoiceList)
-catTypeKnown: false,
-priIsBool: false,     // Priority is a boolean/toggle column
-priTypeKnown: false,
-typesChecked: false,
-view: "month",        // 'day' | 'week' | 'month'
-focus: stripTime(today),
-selectedKey: dayKeyFromDate(today),
-sortByPriority: false,
-sortDir: "asc",       // asc = High -> Low
-hiddenCats: new Set(),
-hiddenAsgs: new Set(),
-hiddenStatuses: new Set(),
-redCats: new Set(),   // categories flagged critical (red)
-redCatsInit: false,   // whether redCats has been seeded/loaded
-openPopover: null,    // 'cat' | 'asg' | 'status' | 'sort' | 'flags' | null
-openStatusRow: null,  // rowId whose status menu is open
-openDateRow: null,    // rowId whose due-date editor is open
-editingDescRow: null, // rowId whose description editor is open
-editingAsgRow: null,  // rowId whose assignee editor is open
-editingCatRow: null,  // rowId whose category editor is open
-editingPriRow: null,  // rowId whose priority editor is open
-expandedRows: new Set(), // rowIds whose full description is shown
+  ready: false,
+  haveGrist: typeof grist !== "undefined" && grist && grist.ready,
+  records: [],          // parsed + scheduled deadlines
+  mapped: { due: false, title: false, category: false, assignedTo: false, priority: false, status: false, description: false },
+  cols: {},             // logical name -> real column id (for write/create)
+  statusColId: null,    // real column id of the Status column (for write-back)
+  dueColId: null,       // real column id of the Due Date column (for write-back)
+  descColId: null,
+  asgColId: null,
+  dueIsDateTime: false, // whether the due column carries a time component
+  dueTypeFromMeta: null,// resolved column type from metadata (null until known)
+  asgMulti: false,      // Assigned To holds multiple values (ChoiceList)
+  asgTypeKnown: false,
+  catMulti: false,      // Category holds multiple values (ChoiceList)
+  catTypeKnown: false,
+  priIsBool: false,     // Priority is a boolean/toggle column
+  priTypeKnown: false,
+  typesChecked: false,
+  view: "month",        // 'day' | 'week' | 'month'
+  focus: stripTime(today),
+  selectedKey: dayKeyFromDate(today),
+  sortByPriority: false,
+  sortDir: "asc",       // asc = High -> Low
+  hiddenCats: new Set(),
+  hiddenAsgs: new Set(),
+  hiddenStatuses: new Set(),
+  redCats: new Set(),   // categories flagged critical (red)
+  redCatsInit: false,   // whether redCats has been seeded/loaded
+  openPopover: null,    // 'cat' | 'asg' | 'status' | 'sort' | 'flags' | null
+  openStatusRow: null,  // rowId whose status menu is open
+  openDateRow: null,    // rowId whose due-date editor is open
+  editingDescRow: null, // rowId whose description editor is open
+  editingAsgRow: null,  // rowId whose assignee editor is open
+  editingCatRow: null,  // rowId whose category editor is open
+  editingPriRow: null,  // rowId whose priority editor is open
+  expandedRows: new Set(), // rowIds whose full description is shown
   unplaced: [],         // records with no usable due date (not on the calendar)
   showUnplaced: false,  // whether the "needs attention" panel is open
 };
@@ -400,184 +398,183 @@ const MONTHS = ["January","February","March","April","May","June","July","August
 const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 function fmtTime(h, m) {
-const ap = h >= 12 ? "PM" : "AM";
-let hh = h % 12; if (hh === 0) hh = 12;
-return hh + ":" + String(m).padStart(2, "0") + " " + ap;
+  const ap = h >= 12 ? "PM" : "AM";
+  let hh = h % 12; if (hh === 0) hh = 12;
+  return hh + ":" + String(m).padStart(2, "0") + " " + ap;
 }
 
 /* Interpret a Grist date/datetime numeric value.
-  - Pure Date columns are stored at UTC midnight (value % 86400 === 0) -> read in UTC, no time.
-  - DateTime values -> read in local time, show time if not midnight. */
+   - Pure Date columns are stored at UTC midnight (value % 86400 === 0) -> read in UTC, no time.
+   - DateTime values -> read in local time, show time if not midnight. */
 function parseDue(v) {
-if (v instanceof Date) v = v.getTime() / 1000;
-else if (typeof v === "string" && v.trim() !== "" && !isNaN(Number(v))) v = Number(v);
-if (typeof v !== "number" || !isFinite(v)) return null;
-const hasTime = (v % 86400 !== 0);
-const d = new Date(v * 1000);
-if (hasTime) {
-const h = d.getHours(), m = d.getMinutes();
-return {
-y: d.getFullYear(), mo: d.getMonth(), d: d.getDate(),
-minuteOfDay: h * 60 + m, timed: true,
-timeStr: (h === 0 && m === 0) ? null : fmtTime(h, m),
-};
-}
-return { y: d.getUTCFullYear(), mo: d.getUTCMonth(), d: d.getUTCDate(), minuteOfDay: -1, timed: false, timeStr: null };
+  if (v instanceof Date) v = v.getTime() / 1000;
+  else if (typeof v === "string" && v.trim() !== "" && !isNaN(Number(v))) v = Number(v);
+  if (typeof v !== "number" || !isFinite(v)) return null;
+  const hasTime = (v % 86400 !== 0);
+  const d = new Date(v * 1000);
+  if (hasTime) {
+    const h = d.getHours(), m = d.getMinutes();
+    return {
+      y: d.getFullYear(), mo: d.getMonth(), d: d.getDate(),
+      minuteOfDay: h * 60 + m, timed: true,
+      timeStr: (h === 0 && m === 0) ? null : fmtTime(h, m),
+    };
+  }
+  return { y: d.getUTCFullYear(), mo: d.getUTCMonth(), d: d.getUTCDate(), minuteOfDay: -1, timed: false, timeStr: null };
 }
 
 /* ===================== Value helpers ===================== */
 function toList(v) {
-if (v === null || v === undefined || v === "") return [];
-if (Array.isArray(v)) {
-const items = (v[0] === "L") ? v.slice(1) : v;
-return items.filter(x => x !== null && x !== undefined && x !== "").map(x => String(x));
-}
-return [String(v)];
+  if (v === null || v === undefined || v === "") return [];
+  if (Array.isArray(v)) {
+    const items = (v[0] === "L") ? v.slice(1) : v;
+    return items.filter(x => x !== null && x !== undefined && x !== "").map(x => String(x));
+  }
+  return [String(v)];
 }
 
 const PRI_WORDS = {
-"highest":0,"critical":0,"urgent":0,"emergency":0,"p0":0,"a":0,
-"high":1,"p1":1,"important":1,
-"medium":2,"normal":2,"med":2,"moderate":2,"standard":2,"p2":2,
-"low":3,"p3":3,
-"lowest":4,"p4":4,"none":5
+  "highest":0,"critical":0,"urgent":0,"emergency":0,"p0":0,"a":0,
+  "high":1,"p1":1,"important":1,
+  "medium":2,"normal":2,"med":2,"moderate":2,"standard":2,"p2":2,
+  "low":3,"p3":3,
+  "lowest":4,"p4":4,"none":5
 };
 function priorityRank(v) {
-if (v === null || v === undefined || v === "") return { num: Infinity, str: "" };
-if (v === true) return { num: 0, str: "" };
-if (v === false) return { num: 6, str: "" };
-if (typeof v === "number") return { num: v, str: "" };
-const s = String(v).trim().toLowerCase();
-if (s === "true" || s === "yes" || s === "y") return { num: 0, str: s };
-if (s === "false" || s === "no" || s === "n") return { num: 6, str: s };
-if (s in PRI_WORDS) return { num: PRI_WORDS[s], str: s };
-const n = parseFloat(s);
-if (!isNaN(n)) return { num: n, str: s };
-return { num: 1000, str: s }; // unknown text -> after known ranks, then alpha
+  if (v === null || v === undefined || v === "") return { num: Infinity, str: "" };
+  if (v === true) return { num: 0, str: "" };
+  if (v === false) return { num: 6, str: "" };
+  if (typeof v === "number") return { num: v, str: "" };
+  const s = String(v).trim().toLowerCase();
+  if (s === "true" || s === "yes" || s === "y") return { num: 0, str: s };
+  if (s === "false" || s === "no" || s === "n") return { num: 6, str: s };
+  if (s in PRI_WORDS) return { num: PRI_WORDS[s], str: s };
+  const n = parseFloat(s);
+  if (!isNaN(n)) return { num: n, str: s };
+  return { num: 1000, str: s }; // unknown text -> after known ranks, then alpha
 }
 
 // Deterministic pleasant color for a category label.
 const CAT_COLORS = ["#1a7f6b","#3a6ea5","#b4452f","#8a5a9c","#a8762a","#2f7d8a","#7a8c2e","#9c4f6b","#4a5d8a","#6b8e23"];
 function catColor(label) {
-let h = 0; for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) >>> 0;
-return CAT_COLORS[h % CAT_COLORS.length];
+  let h = 0; for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) >>> 0;
+  return CAT_COLORS[h % CAT_COLORS.length];
 }
 
 function esc(s) {
-return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
 }
 
 /* ===================== Filtering / sorting ===================== */
 function recCats(r) { const l = toList(r.category); return l.length ? l : [NO_CAT]; }
 function recAsgs(r) { const l = toList(r.assignedTo); return l.length ? l : [UNASSIGNED]; }
 function recStatus(r) {
-const s = r.status;
-if (s === null || s === undefined || String(s).trim() === "") return [NO_STATUS];
-return [String(s)];
+  const s = r.status;
+  if (s === null || s === undefined || String(s).trim() === "") return [NO_STATUS];
+  return [String(s)];
 }
 
 /* ----- Status / criticality classification ----- */
 function isComplete(r) {
-if (!state.mapped.status) return false;
-const s = r.status;
-if (s === null || s === undefined) return false;
-return COMPLETE_WORDS.has(String(s).trim().toLowerCase());
+  if (!state.mapped.status) return false;
+  const s = r.status;
+  if (s === null || s === undefined) return false;
+  return COMPLETE_WORDS.has(String(s).trim().toLowerCase());
 }
 function isReady(r) {
-if (!state.mapped.status) return false;
-const s = r.status;
-if (s === null || s === undefined) return false;
-return READY_WORDS.has(String(s).trim().toLowerCase());
+  if (!state.mapped.status) return false;
+  const s = r.status;
+  if (s === null || s === undefined) return false;
+  return READY_WORDS.has(String(s).trim().toLowerCase());
 }
 function isImportant(v) {
-if (v === null || v === undefined || v === "") return false;
-return priorityRank(v).num <= 1; // highest/critical/urgent/high/important/p0/p1 or numeric <=1
+  if (v === null || v === undefined || v === "") return false;
+  return priorityRank(v).num <= 1; // highest/critical/urgent/high/important/p0/p1 or numeric <=1
 }
 function isCritical(r) {
-if (state.mapped.priority && isImportant(r.priority)) return true;
-if (state.mapped.category && recCats(r).some(c => state.redCats.has(c))) return true;
-return false;
+  if (state.mapped.priority && isImportant(r.priority)) return true;
+  if (state.mapped.category && recCats(r).some(c => state.redCats.has(c))) return true;
+  return false;
 }
 // 'complete' and 'ready' (green) win over 'critical' (red), else 'normal'
 function classify(r) {
-if (isComplete(r)) return "complete";
-if (isReady(r)) return "ready";
-if (isCritical(r)) return "critical";
-return "normal";
+  if (isComplete(r)) return "complete";
+  if (isReady(r)) return "ready";
+  if (isCritical(r)) return "critical";
+  return "normal";
 }
 function stripeColor(r, kind) {
-if (kind === "complete" || kind === "ready") return "var(--green)";
-if (kind === "critical") return "var(--red)";
-const cats = recCats(r);
-return (state.mapped.category && cats[0] !== NO_CAT) ? catColor(cats[0]) : "var(--accent)";
+  if (kind === "complete" || kind === "ready") return "var(--green)";
+  if (kind === "critical") return "var(--red)";
+  const cats = recCats(r);
+  return (state.mapped.category && cats[0] !== NO_CAT) ? catColor(cats[0]) : "var(--accent)";
 }
 
 function isVisible(r) {
-if (state.mapped.category) {
-const cats = recCats(r);
-if (!cats.some(c => !state.hiddenCats.has(c))) return false;
-}
-if (state.mapped.assignedTo) {
-const asgs = recAsgs(r);
-if (!asgs.some(a => !state.hiddenAsgs.has(a))) return false;
-}
-if (state.mapped.status) {
-const ss = recStatus(r);
-if (!ss.some(s => !state.hiddenStatuses.has(s))) return false;
-}
-return true;
+  if (state.mapped.category) {
+    const cats = recCats(r);
+    if (!cats.some(c => !state.hiddenCats.has(c))) return false;
+  }
+  if (state.mapped.assignedTo) {
+    const asgs = recAsgs(r);
+    if (!asgs.some(a => !state.hiddenAsgs.has(a))) return false;
+  }
+  if (state.mapped.status) {
+    const ss = recStatus(r);
+    if (!ss.some(s => !state.hiddenStatuses.has(s))) return false;
+  }
+  return true;
 }
 
 function compareRows(a, b) {
-if (state.sortByPriority && state.mapped.priority) {
-const pa = priorityRank(a.priority), pb = priorityRank(b.priority);
-let c = pa.num - pb.num;
-if (c === 0) c = pa.str.localeCompare(pb.str);
-if (state.sortDir === "desc") c = -c;
-if (c !== 0) return c;
-}
-if (a.due.minuteOfDay !== b.due.minuteOfDay) return a.due.minuteOfDay - b.due.minuteOfDay;
-return String(a.title).localeCompare(String(b.title));
+  if (state.sortByPriority && state.mapped.priority) {
+    const pa = priorityRank(a.priority), pb = priorityRank(b.priority);
+    let c = pa.num - pb.num;
+    if (c === 0) c = pa.str.localeCompare(pb.str);
+    if (state.sortDir === "desc") c = -c;
+    if (c !== 0) return c;
+  }
+  if (a.due.minuteOfDay !== b.due.minuteOfDay) return a.due.minuteOfDay - b.due.minuteOfDay;
+  return String(a.title).localeCompare(String(b.title));
 }
 
 function distinctValues(getter) {
-const set = new Set();
-for (const r of state.records) for (const v of getter(r)) set.add(v);
-return Array.from(set).sort((a, b) => a.localeCompare(b));
+  const set = new Set();
+  for (const r of state.records) for (const v of getter(r)) set.add(v);
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
 
 function recordsForKey(key) {
-return state.records.filter(r => r.key === key && isVisible(r)).sort(compareRows);
+  return state.records.filter(r => r.key === key && isVisible(r)).sort(compareRows);
 }
 
 /* ===================== Rendering ===================== */
 function render() {
-if (!state.haveGrist) {
-document.getElementById("toolbar").style.display = "none";
-document.getElementById("meta").style.display = "none";
-document.getElementById("body").innerHTML =
-'<div class="notice"><h2>Open this inside Grist</h2><p>This page is a Grist custom widget. Add it to a Grist document via <b>Add Widget &rarr; Custom</b>, paste this page&rsquo;s URL, grant <b>Full</b> (read &amp; write) access, then map the columns in the creator panel.</p></div>';
-return;
-}
-renderToolbar();
-const body = document.getElementById("body");
+  if (!state.haveGrist) {
+    document.getElementById("toolbar").style.display = "none";
+    document.getElementById("meta").style.display = "none";
+    document.getElementById("body").innerHTML =
+      '<div class="notice"><h2>Open this inside Grist</h2><p>This page is a Grist custom widget. Add it to a Grist document via <b>Add Widget &rarr; Custom</b>, paste this page&rsquo;s URL, grant <b>Full</b> (read &amp; write) access, then map the columns in the creator panel.</p></div>';
+    return;
+  }
+  renderToolbar();
+  const body = document.getElementById("body");
 
-if (!state.mapped.due || !state.mapped.title) {
-document.getElementById("meta").innerHTML = "";
-body.innerHTML =
-'<div class="notice"><h2>Map your columns</h2><p>In the creator panel on the right, set the widget&rsquo;s column mappings:</p>'
-+ '<ol><li><b>Due Date</b> &mdash; a Date or DateTime column (required)</li>'
-+ '<li><b>Calendar Title</b> &mdash; the text shown for each deadline (required)</li>'
-      + '<li><b>Status</b>, <b>Description</b>, <b>Category</b>, <b>Assigned To</b>, <b>Priority</b> &mdash; optional</li></ol></div>';
+  if (!state.mapped.due || !state.mapped.title) {
+    document.getElementById("meta").innerHTML = "";
+    body.innerHTML =
+      '<div class="notice"><h2>Map your columns</h2><p>In the creator panel on the right, set the widget&rsquo;s column mappings:</p>'
+      + '<ol><li><b>Due Date</b> &mdash; a Date or DateTime column (required)</li>'
+      + '<li><b>Calendar Title</b> &mdash; the text shown for each deadline (required)</li>'
       + '<li><b>Status</b>, <b>Description</b>, <b>Days Left</b>, <b>Category</b>, <b>Assigned To</b>, <b>Priority</b> &mdash; optional</li></ol></div>';
-return;
-}
+    return;
+  }
 
-renderMeta();
-if (state.view === "month") body.innerHTML = "", body.appendChild(renderMonth());
-else if (state.view === "week") body.innerHTML = "", body.appendChild(renderWeek());
-else body.innerHTML = "", body.appendChild(renderDay());
-adjustClamps();
+  renderMeta();
+  if (state.view === "month") body.innerHTML = "", body.appendChild(renderMonth());
+  else if (state.view === "week") body.innerHTML = "", body.appendChild(renderWeek());
+  else body.innerHTML = "", body.appendChild(renderDay());
+  adjustClamps();
   renderUnplacedOverlay();
 }
 
@@ -648,21 +645,19 @@ function iso(d) { return pad4(d.getFullYear()) + "-" + pad2(d.getMonth() + 1) + 
 
 // Reveal the "Show more" hint only on rows whose description preview is actually clipped.
 function adjustClamps() {
-document.querySelectorAll(".row").forEach(row => {
-const d = row.querySelector(".desc:not(.full)");
-if (d && d.scrollHeight - d.clientHeight > 2) row.classList.add("truncated");
-});
+  document.querySelectorAll(".row").forEach(row => {
+    const d = row.querySelector(".desc:not(.full)");
+    if (d && d.scrollHeight - d.clientHeight > 2) row.classList.add("truncated");
+  });
 }
 
 function renderMeta() {
-const visible = state.records.filter(isVisible).length;
-let txt = "<b>" + visible + "</b> deadline" + (visible === 1 ? "" : "s") + " shown";
-const hiddenByFilter = state.records.length - visible;
-if (hiddenByFilter > 0) txt += " &middot; " + hiddenByFilter + " hidden by filters";
-  if (state.unscheduled > 0) txt += " &middot; <b>" + state.unscheduled + "</b> with no valid due date (not shown)";
-if (state.mapped.status) txt += '<span class="lg"><i style="background:var(--green)"></i>complete / ready</span>';
-if (state.mapped.priority || state.mapped.category) txt += '<span class="lg"><i style="background:var(--red)"></i>critical</span>';
-  document.getElementById("meta").innerHTML = txt;
+  const visible = state.records.filter(isVisible).length;
+  let txt = "<b>" + visible + "</b> deadline" + (visible === 1 ? "" : "s") + " shown";
+  const hiddenByFilter = state.records.length - visible;
+  if (hiddenByFilter > 0) txt += " &middot; " + hiddenByFilter + " hidden by filters";
+  if (state.mapped.status) txt += '<span class="lg"><i style="background:var(--green)"></i>complete / ready</span>';
+  if (state.mapped.priority || state.mapped.category) txt += '<span class="lg"><i style="background:var(--red)"></i>critical</span>';
   const n = state.unplaced.length;
   if (n > 0) txt += ' &middot; <a id="unplaced-link" class="needattn">\u26A0 ' + n + " need" + (n === 1 ? "s" : "") + " attention</a>";
   const meta = document.getElementById("meta");
@@ -673,61 +668,61 @@ if (state.mapped.priority || state.mapped.category) txt += '<span class="lg"><i 
 
 /* ---- Toolbar ---- */
 function renderToolbar() {
-const tb = document.getElementById("toolbar");
-tb.innerHTML = "";
+  const tb = document.getElementById("toolbar");
+  tb.innerHTML = "";
 
-const seg = el("div", "seg");
-["day","week","month"].forEach(v => {
-const b = el("button", v === state.view ? "active" : "");
-b.textContent = v[0].toUpperCase() + v.slice(1);
-b.onclick = () => { state.view = v; persist(); render(); };
-seg.appendChild(b);
-});
-tb.appendChild(seg);
+  const seg = el("div", "seg");
+  ["day","week","month"].forEach(v => {
+    const b = el("button", v === state.view ? "active" : "");
+    b.textContent = v[0].toUpperCase() + v.slice(1);
+    b.onclick = () => { state.view = v; persist(); render(); };
+    seg.appendChild(b);
+  });
+  tb.appendChild(seg);
 
-const nav = el("div", "nav");
-const prev = el("button", "iconbtn"); prev.innerHTML = "&#8249;"; prev.title = "Previous";
-prev.onclick = () => shift(-1);
-const todayB = el("button", "todaybtn"); todayB.textContent = "Today";
-todayB.onclick = () => { state.focus = stripTime(new Date()); state.selectedKey = dayKeyFromDate(state.focus); render(); };
-const next = el("button", "iconbtn"); next.innerHTML = "&#8250;"; next.title = "Next";
-next.onclick = () => shift(1);
-nav.append(prev, todayB, next);
-tb.appendChild(nav);
+  const nav = el("div", "nav");
+  const prev = el("button", "iconbtn"); prev.innerHTML = "&#8249;"; prev.title = "Previous";
+  prev.onclick = () => shift(-1);
+  const todayB = el("button", "todaybtn"); todayB.textContent = "Today";
+  todayB.onclick = () => { state.focus = stripTime(new Date()); state.selectedKey = dayKeyFromDate(state.focus); render(); };
+  const next = el("button", "iconbtn"); next.innerHTML = "&#8250;"; next.title = "Next";
+  next.onclick = () => shift(1);
+  nav.append(prev, todayB, next);
+  tb.appendChild(nav);
 
-const period = el("div", "period");
-period.textContent = periodLabel();
-tb.appendChild(period);
+  const period = el("div", "period");
+  period.textContent = periodLabel();
+  tb.appendChild(period);
 
-const nb = el("button", "newbtn");
-nb.innerHTML = "\uFF0B New";
-nb.title = "Create a new deadline";
-nb.onclick = (e) => { e.stopPropagation(); openNewTask(state.selectedKey); };
-tb.appendChild(nb);
+  const nb = el("button", "newbtn");
+  nb.innerHTML = "\uFF0B New";
+  nb.title = "Create a new deadline";
+  nb.onclick = (e) => { e.stopPropagation(); openNewTask(state.selectedKey); };
+  tb.appendChild(nb);
 
-tb.appendChild(el("div", "spacer"));
+  tb.appendChild(el("div", "spacer"));
 
-if (state.mapped.category) tb.appendChild(filterDropdown("cat", "Categories", state.hiddenCats, recCats));
-if (state.mapped.assignedTo) tb.appendChild(filterDropdown("asg", "Assigned", state.hiddenAsgs, recAsgs));
-if (state.mapped.status) tb.appendChild(filterDropdown("status", "Status", state.hiddenStatuses, recStatus));
-tb.appendChild(sortDropdown());
-if (state.mapped.category) tb.appendChild(flagsDropdown());
+  if (state.mapped.category) tb.appendChild(filterDropdown("cat", "Categories", state.hiddenCats, recCats));
+  if (state.mapped.assignedTo) tb.appendChild(filterDropdown("asg", "Assigned", state.hiddenAsgs, recAsgs));
+  if (state.mapped.status) tb.appendChild(filterDropdown("status", "Status", state.hiddenStatuses, recStatus));
+  tb.appendChild(sortDropdown());
+  if (state.mapped.category) tb.appendChild(flagsDropdown());
 }
 
 function shift(dir) {
-if (state.view === "month") state.focus = new Date(state.focus.getFullYear(), state.focus.getMonth() + dir, 1);
-else if (state.view === "week") state.focus = addDays(state.focus, 7 * dir);
-else { state.focus = addDays(state.focus, dir); state.selectedKey = dayKeyFromDate(state.focus); }
-render();
+  if (state.view === "month") state.focus = new Date(state.focus.getFullYear(), state.focus.getMonth() + dir, 1);
+  else if (state.view === "week") state.focus = addDays(state.focus, 7 * dir);
+  else { state.focus = addDays(state.focus, dir); state.selectedKey = dayKeyFromDate(state.focus); }
+  render();
 }
 
 function periodLabel() {
-const f = state.focus;
-if (state.view === "month") return MONTHS[f.getMonth()] + " " + f.getFullYear();
-if (state.view === "day") return DOW[f.getDay()] + ", " + MONTHS[f.getMonth()] + " " + f.getDate() + ", " + f.getFullYear();
-const s = startOfWeek(f), e = addDays(s, 6);
-if (s.getMonth() === e.getMonth()) return MONTHS[s.getMonth()] + " " + s.getDate() + "\u2013" + e.getDate() + ", " + s.getFullYear();
-return MONTHS[s.getMonth()].slice(0,3) + " " + s.getDate() + " \u2013 " + MONTHS[e.getMonth()].slice(0,3) + " " + e.getDate() + ", " + e.getFullYear();
+  const f = state.focus;
+  if (state.view === "month") return MONTHS[f.getMonth()] + " " + f.getFullYear();
+  if (state.view === "day") return DOW[f.getDay()] + ", " + MONTHS[f.getMonth()] + " " + f.getDate() + ", " + f.getFullYear();
+  const s = startOfWeek(f), e = addDays(s, 6);
+  if (s.getMonth() === e.getMonth()) return MONTHS[s.getMonth()] + " " + s.getDate() + "\u2013" + e.getDate() + ", " + s.getFullYear();
+  return MONTHS[s.getMonth()].slice(0,3) + " " + s.getDate() + " \u2013 " + MONTHS[e.getMonth()].slice(0,3) + " " + e.getDate() + ", " + e.getFullYear();
 }
 
 function popHeader(titleText) {
@@ -740,434 +735,431 @@ function popHeader(titleText) {
 }
 
 function filterDropdown(id, label, hiddenSet, getter) {
-const wrap = el("div", "dropwrap");
-const values = distinctValues(getter);
-const activeCount = values.filter(v => !hiddenSet.has(v)).length;
-const btn = el("button", "dropbtn");
-btn.innerHTML = esc(label);
-if (hiddenSet.size > 0) btn.innerHTML += ' <span class="dot">' + activeCount + "/" + values.length + "</span>";
-btn.innerHTML += ' <span class="caret">&#9662;</span>';
-btn.onclick = (e) => { e.stopPropagation(); state.openPopover = state.openPopover === id ? null : id; render(); };
-wrap.appendChild(btn);
+  const wrap = el("div", "dropwrap");
+  const values = distinctValues(getter);
+  const activeCount = values.filter(v => !hiddenSet.has(v)).length;
+  const btn = el("button", "dropbtn");
+  btn.innerHTML = esc(label);
+  if (hiddenSet.size > 0) btn.innerHTML += ' <span class="dot">' + activeCount + "/" + values.length + "</span>";
+  btn.innerHTML += ' <span class="caret">&#9662;</span>';
+  btn.onclick = (e) => { e.stopPropagation(); state.openPopover = state.openPopover === id ? null : id; render(); };
+  wrap.appendChild(btn);
 
-if (state.openPopover === id) {
-const pop = el("div", "popover");
-pop.onclick = (e) => e.stopPropagation();
-    pop.appendChild(Object.assign(el("h4"), { textContent: "Show " + label.toLowerCase() }));
+  if (state.openPopover === id) {
+    const pop = el("div", "popover");
+    pop.onclick = (e) => e.stopPropagation();
     pop.appendChild(popHeader("Show " + label.toLowerCase()));
-const list = el("div", "poplist");
-values.forEach(v => {
-const r = el("label", "poprow");
-const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !hiddenSet.has(v);
-cb.onchange = () => { if (cb.checked) hiddenSet.delete(v); else hiddenSet.add(v); persist(); render(); };
-r.appendChild(cb);
-if (id === "cat" && v !== NO_CAT) {
-const sw = el("span", "swatch"); sw.style.background = catColor(v); r.appendChild(sw);
-}
-r.appendChild(Object.assign(el("span", "label"), { textContent: v }));
-list.appendChild(r);
-});
-pop.appendChild(list);
-const acts = el("div", "popactions");
-const all = el("button"); all.textContent = "Select all";
-all.onclick = () => { values.forEach(v => hiddenSet.delete(v)); persist(); render(); };
-const none = el("button"); none.textContent = "Clear";
-none.onclick = () => { values.forEach(v => hiddenSet.add(v)); persist(); render(); };
-acts.append(all, none);
-pop.appendChild(acts);
-wrap.appendChild(pop);
-}
-return wrap;
+    const list = el("div", "poplist");
+    values.forEach(v => {
+      const r = el("label", "poprow");
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !hiddenSet.has(v);
+      cb.onchange = () => { if (cb.checked) hiddenSet.delete(v); else hiddenSet.add(v); persist(); render(); };
+      r.appendChild(cb);
+      if (id === "cat" && v !== NO_CAT) {
+        const sw = el("span", "swatch"); sw.style.background = catColor(v); r.appendChild(sw);
+      }
+      r.appendChild(Object.assign(el("span", "label"), { textContent: v }));
+      list.appendChild(r);
+    });
+    pop.appendChild(list);
+    const acts = el("div", "popactions");
+    const all = el("button"); all.textContent = "Select all";
+    all.onclick = () => { values.forEach(v => hiddenSet.delete(v)); persist(); render(); };
+    const none = el("button"); none.textContent = "Clear";
+    none.onclick = () => { values.forEach(v => hiddenSet.add(v)); persist(); render(); };
+    acts.append(all, none);
+    pop.appendChild(acts);
+    wrap.appendChild(pop);
+  }
+  return wrap;
 }
 
 function sortDropdown() {
-const wrap = el("div", "dropwrap");
-const btn = el("button", "dropbtn");
-if (!state.mapped.priority) btn.disabled = true;
-btn.innerHTML = "Sort" + (state.sortByPriority && state.mapped.priority ? ' <span class="dot">priority</span>' : "") + ' <span class="caret">&#9662;</span>';
-btn.onclick = (e) => { e.stopPropagation(); state.openPopover = state.openPopover === "sort" ? null : "sort"; render(); };
-wrap.appendChild(btn);
+  const wrap = el("div", "dropwrap");
+  const btn = el("button", "dropbtn");
+  if (!state.mapped.priority) btn.disabled = true;
+  btn.innerHTML = "Sort" + (state.sortByPriority && state.mapped.priority ? ' <span class="dot">priority</span>' : "") + ' <span class="caret">&#9662;</span>';
+  btn.onclick = (e) => { e.stopPropagation(); state.openPopover = state.openPopover === "sort" ? null : "sort"; render(); };
+  wrap.appendChild(btn);
 
-if (state.openPopover === "sort" && state.mapped.priority) {
-const pop = el("div", "popover");
-pop.onclick = (e) => e.stopPropagation();
-    pop.appendChild(Object.assign(el("h4"), { textContent: "Sort each day" }));
+  if (state.openPopover === "sort" && state.mapped.priority) {
+    const pop = el("div", "popover");
+    pop.onclick = (e) => e.stopPropagation();
     pop.appendChild(popHeader("Sort each day"));
 
-const toggle = el("label", "poprow");
-const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = state.sortByPriority;
-cb.onchange = () => { state.sortByPriority = cb.checked; persist(); render(); };
-toggle.append(cb, Object.assign(el("span", "label"), { textContent: "Sort by priority" }));
-pop.appendChild(toggle);
+    const toggle = el("label", "poprow");
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = state.sortByPriority;
+    cb.onchange = () => { state.sortByPriority = cb.checked; persist(); render(); };
+    toggle.append(cb, Object.assign(el("span", "label"), { textContent: "Sort by priority" }));
+    pop.appendChild(toggle);
 
-[["asc","High \u2192 Low"],["desc","Low \u2192 High"]].forEach(([val, lbl]) => {
-const r = el("label", "radio-row");
-const rb = document.createElement("input"); rb.type = "radio"; rb.name = "sortdir";
-rb.checked = state.sortDir === val; rb.disabled = !state.sortByPriority;
-rb.onchange = () => { state.sortDir = val; persist(); render(); };
-r.append(rb, Object.assign(el("span", "label"), { textContent: lbl }));
-pop.appendChild(r);
-});
-const hint = el("div"); hint.style.cssText = "font-size:11px;color:var(--ink-faint);padding:6px;border-top:1px solid var(--line);margin-top:4px;";
-hint.textContent = "When off, days sort by time, then title.";
-pop.appendChild(hint);
-wrap.appendChild(pop);
-}
-return wrap;
+    [["asc","High \u2192 Low"],["desc","Low \u2192 High"]].forEach(([val, lbl]) => {
+      const r = el("label", "radio-row");
+      const rb = document.createElement("input"); rb.type = "radio"; rb.name = "sortdir";
+      rb.checked = state.sortDir === val; rb.disabled = !state.sortByPriority;
+      rb.onchange = () => { state.sortDir = val; persist(); render(); };
+      r.append(rb, Object.assign(el("span", "label"), { textContent: lbl }));
+      pop.appendChild(r);
+    });
+    const hint = el("div"); hint.style.cssText = "font-size:11px;color:var(--ink-faint);padding:6px;border-top:1px solid var(--line);margin-top:4px;";
+    hint.textContent = "When off, days sort by time, then title.";
+    pop.appendChild(hint);
+    wrap.appendChild(pop);
+  }
+  return wrap;
 }
 
 function flagsDropdown() {
-const wrap = el("div", "dropwrap");
-const btn = el("button", "dropbtn");
-btn.innerHTML = "\u2691 Flags" + (state.redCats.size ? ' <span class="dot">' + state.redCats.size + "</span>" : "") + ' <span class="caret">&#9662;</span>';
-btn.onclick = (e) => { e.stopPropagation(); state.openPopover = state.openPopover === "flags" ? null : "flags"; render(); };
-wrap.appendChild(btn);
+  const wrap = el("div", "dropwrap");
+  const btn = el("button", "dropbtn");
+  btn.innerHTML = "\u2691 Flags" + (state.redCats.size ? ' <span class="dot">' + state.redCats.size + "</span>" : "") + ' <span class="caret">&#9662;</span>';
+  btn.onclick = (e) => { e.stopPropagation(); state.openPopover = state.openPopover === "flags" ? null : "flags"; render(); };
+  wrap.appendChild(btn);
 
-if (state.openPopover === "flags") {
-const pop = el("div", "popover");
-pop.onclick = (e) => e.stopPropagation();
-    pop.appendChild(Object.assign(el("h4"), { textContent: "Highlight red (critical categories)" }));
+  if (state.openPopover === "flags") {
+    const pop = el("div", "popover");
+    pop.onclick = (e) => e.stopPropagation();
     pop.appendChild(popHeader("Highlight red (critical categories)"));
-const list = el("div", "poplist");
-const cats = distinctValues(recCats).filter(c => c !== NO_CAT);
-if (!cats.length) list.appendChild(Object.assign(el("div", "empty"), { textContent: "No categories found yet." }));
-cats.forEach(c => {
-const r = el("label", "poprow");
-const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = state.redCats.has(c);
-cb.onchange = () => { if (cb.checked) state.redCats.add(c); else state.redCats.delete(c); persist(); render(); };
-const sw = el("span", "swatch"); sw.style.background = catColor(c);
-r.append(cb, sw, Object.assign(el("span", "label"), { textContent: c }));
-list.appendChild(r);
-});
-pop.appendChild(list);
-const hint = el("div"); hint.style.cssText = "font-size:11px;color:var(--ink-faint);padding:6px;border-top:1px solid var(--line);margin-top:4px;";
-hint.textContent = "High / important priority deadlines are always red. Completed deadlines are always green.";
-pop.appendChild(hint);
-wrap.appendChild(pop);
-}
-return wrap;
+    const list = el("div", "poplist");
+    const cats = distinctValues(recCats).filter(c => c !== NO_CAT);
+    if (!cats.length) list.appendChild(Object.assign(el("div", "empty"), { textContent: "No categories found yet." }));
+    cats.forEach(c => {
+      const r = el("label", "poprow");
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = state.redCats.has(c);
+      cb.onchange = () => { if (cb.checked) state.redCats.add(c); else state.redCats.delete(c); persist(); render(); };
+      const sw = el("span", "swatch"); sw.style.background = catColor(c);
+      r.append(cb, sw, Object.assign(el("span", "label"), { textContent: c }));
+      list.appendChild(r);
+    });
+    pop.appendChild(list);
+    const hint = el("div"); hint.style.cssText = "font-size:11px;color:var(--ink-faint);padding:6px;border-top:1px solid var(--line);margin-top:4px;";
+    hint.textContent = "High / important priority deadlines are always red. Completed deadlines are always green.";
+    pop.appendChild(hint);
+    wrap.appendChild(pop);
+  }
+  return wrap;
 }
 
 /* ---- Deadline row ---- */
 function rowEl(r, compact) {
-const kind = classify(r);
-const expanded = state.expandedRows.has(r.id);
-const editingAsg = state.editingAsgRow === r.id;
-const editingDesc = state.editingDescRow === r.id;
-const editingCat = state.editingCatRow === r.id;
-const editingPri = state.editingPriRow === r.id;
-const row = el("div", "row " + kind + (compact ? " compactrow" : "") + (expanded ? " expanded" : ""));
-row.style.borderLeftColor = stripeColor(r, kind);
+  const kind = classify(r);
+  const expanded = state.expandedRows.has(r.id);
+  const editingAsg = state.editingAsgRow === r.id;
+  const editingDesc = state.editingDescRow === r.id;
+  const editingCat = state.editingCatRow === r.id;
+  const editingPri = state.editingPriRow === r.id;
+  const row = el("div", "row " + kind + (compact ? " compactrow" : "") + (expanded ? " expanded" : ""));
+  row.style.borderLeftColor = stripeColor(r, kind);
 
-row.appendChild(dueCell(r, compact));
+  row.appendChild(dueCell(r, compact));
 
-const main = el("div", "main");
-const title = el("div", "title" + (kind === "complete" ? " done" : ""));
-title.textContent = (kind === "complete" ? "\u2713 " : "") + (r.title || "(untitled)");
-main.appendChild(title);
+  const main = el("div", "main");
+  const title = el("div", "title" + (kind === "complete" ? " done" : ""));
+  title.textContent = (kind === "complete" ? "\u2713 " : "") + (r.title || "(untitled)");
+  main.appendChild(title);
 
-const tags = el("div", "tags");
-if (state.mapped.category && !editingCat) {
-recCats(r).forEach(c => {
-if (c === NO_CAT) return;
-const t = el("span", "tag cat"); t.style.background = catColor(c); t.textContent = c; tags.appendChild(t);
-});
-const hasCat = recCats(r)[0] !== NO_CAT;
-tags.appendChild(makeEditChip(hasCat, "\uFF0B category", "Edit category", () => openInlineEditor("cat", r.id)));
-}
-if (state.mapped.assignedTo && !editingAsg) {
-recAsgs(r).forEach(a => {
-if (a === UNASSIGNED) return;
-tags.appendChild(Object.assign(el("span", "tag asg"), { textContent: a }));
-});
-const hasAsg = recAsgs(r)[0] !== UNASSIGNED;
-tags.appendChild(makeEditChip(hasAsg, "\uFF0B assign", "Edit who's assigned", () => openInlineEditor("asg", r.id)));
-}
-if (state.mapped.priority && !editingPri) {
-const important = isImportant(r.priority);
-const hasPri = r.priority !== null && r.priority !== undefined && r.priority !== "" && r.priority !== false;
-if (state.priIsBool) {
-if (important) tags.appendChild(Object.assign(el("span", "tag pri imp"), { textContent: "Important!" }));
-} else if (hasPri) {
-tags.appendChild(Object.assign(el("span", "tag pri" + (important ? " imp" : "")), { textContent: "\u25B2 " + r.priority }));
-}
-const showVal = state.priIsBool ? important : hasPri;
-tags.appendChild(makeEditChip(showVal, "\uFF0B priority", "Edit priority", () => openInlineEditor("pri", r.id)));
-}
-if (tags.children.length) main.appendChild(tags);
+  const tags = el("div", "tags");
+  if (state.mapped.category && !editingCat) {
+    recCats(r).forEach(c => {
+      if (c === NO_CAT) return;
+      const t = el("span", "tag cat"); t.style.background = catColor(c); t.textContent = c; tags.appendChild(t);
+    });
+    const hasCat = recCats(r)[0] !== NO_CAT;
+    tags.appendChild(makeEditChip(hasCat, "\uFF0B category", "Edit category", () => openInlineEditor("cat", r.id)));
+  }
+  if (state.mapped.assignedTo && !editingAsg) {
+    recAsgs(r).forEach(a => {
+      if (a === UNASSIGNED) return;
+      tags.appendChild(Object.assign(el("span", "tag asg"), { textContent: a }));
+    });
+    const hasAsg = recAsgs(r)[0] !== UNASSIGNED;
+    tags.appendChild(makeEditChip(hasAsg, "\uFF0B assign", "Edit who's assigned", () => openInlineEditor("asg", r.id)));
+  }
+  if (state.mapped.priority && !editingPri) {
+    const important = isImportant(r.priority);
+    const hasPri = r.priority !== null && r.priority !== undefined && r.priority !== "" && r.priority !== false;
+    if (state.priIsBool) {
+      if (important) tags.appendChild(Object.assign(el("span", "tag pri imp"), { textContent: "Important!" }));
+    } else if (hasPri) {
+      tags.appendChild(Object.assign(el("span", "tag pri" + (important ? " imp" : "")), { textContent: "\u25B2 " + r.priority }));
+    }
+    const showVal = state.priIsBool ? important : hasPri;
+    tags.appendChild(makeEditChip(showVal, "\uFF0B priority", "Edit priority", () => openInlineEditor("pri", r.id)));
+  }
+  if (tags.children.length) main.appendChild(tags);
 
-if (state.mapped.category && editingCat) main.appendChild(categoryEditor(r));
-if (state.mapped.assignedTo && editingAsg) main.appendChild(assigneeEditor(r));
-if (state.mapped.priority && editingPri) main.appendChild(priorityEditor(r));
+  if (state.mapped.category && editingCat) main.appendChild(categoryEditor(r));
+  if (state.mapped.assignedTo && editingAsg) main.appendChild(assigneeEditor(r));
+  if (state.mapped.priority && editingPri) main.appendChild(priorityEditor(r));
 
-// Description: editor, or expandable preview, or "+ Add note"
-const hasDesc = r.description !== null && r.description !== undefined && String(r.description).trim() !== "";
-if (state.mapped.description) {
-if (editingDesc) {
-main.appendChild(descEditor(r));
-} else if (hasDesc) {
-const desc = el("div", "desc" + (expanded ? " full" : ""));
-desc.textContent = String(r.description);
-main.appendChild(desc);
-main.appendChild(Object.assign(el("div", "descmore"), { textContent: expanded ? "Show less \u25B4" : "Show more \u25BE" }));
-if (expanded) {
-const ed = el("span", "editlink"); ed.textContent = "Edit note";
-ed.onclick = (e) => { e.stopPropagation(); openInlineEditor("desc", r.id); };
-main.appendChild(ed);
-}
-} else {
-const add = el("span", "addnote"); add.textContent = "\uFF0B Add note";
-add.onclick = (e) => { e.stopPropagation(); openInlineEditor("desc", r.id); };
-main.appendChild(add);
-}
-}
-row.appendChild(main);
+  // Description: editor, or expandable preview, or "+ Add note"
+  const hasDesc = r.description !== null && r.description !== undefined && String(r.description).trim() !== "";
+  if (state.mapped.description) {
+    if (editingDesc) {
+      main.appendChild(descEditor(r));
+    } else if (hasDesc) {
+      const desc = el("div", "desc" + (expanded ? " full" : ""));
+      desc.textContent = String(r.description);
+      main.appendChild(desc);
+      main.appendChild(Object.assign(el("div", "descmore"), { textContent: expanded ? "Show less \u25B4" : "Show more \u25BE" }));
+      if (expanded) {
+        const ed = el("span", "editlink"); ed.textContent = "Edit note";
+        ed.onclick = (e) => { e.stopPropagation(); openInlineEditor("desc", r.id); };
+        main.appendChild(ed);
+      }
+    } else {
+      const add = el("span", "addnote"); add.textContent = "\uFF0B Add note";
+      add.onclick = (e) => { e.stopPropagation(); openInlineEditor("desc", r.id); };
+      main.appendChild(add);
+    }
+  }
+  row.appendChild(main);
 
-if (state.mapped.status) row.appendChild(statusControl(r, kind));
+  if (state.mapped.status) row.appendChild(statusControl(r, kind));
 
-row.onclick = () => {
-if (hasDesc && !editingDesc) {
-if (expanded) state.expandedRows.delete(r.id); else state.expandedRows.add(r.id);
-render();
-}
-selectInGrist(r.id);
-};
-return row;
+  row.onclick = () => {
+    if (hasDesc && !editingDesc) {
+      if (expanded) state.expandedRows.delete(r.id); else state.expandedRows.add(r.id);
+      render();
+    }
+    selectInGrist(r.id);
+  };
+  return row;
 }
 
 function makeEditChip(hasValue, emptyLabel, tip, onClick) {
-const c = el("span", "tag editchip");
-c.textContent = hasValue ? "\u270E" : emptyLabel;
-c.title = tip;
-c.onclick = (e) => { e.stopPropagation(); onClick(); };
-return c;
+  const c = el("span", "tag editchip");
+  c.textContent = hasValue ? "\u270E" : emptyLabel;
+  c.title = tip;
+  c.onclick = (e) => { e.stopPropagation(); onClick(); };
+  return c;
 }
 
 // Clear every transient popover/inline-editor state.
 function clearTransient() {
-state.openDateRow = null; state.openStatusRow = null;
-state.editingDescRow = null; state.editingAsgRow = null;
-state.editingCatRow = null; state.editingPriRow = null;
+  state.openDateRow = null; state.openStatusRow = null;
+  state.editingDescRow = null; state.editingAsgRow = null;
+  state.editingCatRow = null; state.editingPriRow = null;
 }
 
 // Open one inline editor at a time, closing the other transient popovers.
 function openInlineEditor(which, rowId) {
-clearTransient();
-if (which === "desc") state.editingDescRow = rowId;
-else if (which === "asg") state.editingAsgRow = rowId;
-else if (which === "cat") state.editingCatRow = rowId;
-else if (which === "pri") state.editingPriRow = rowId;
-render();
+  clearTransient();
+  if (which === "desc") state.editingDescRow = rowId;
+  else if (which === "asg") state.editingAsgRow = rowId;
+  else if (which === "cat") state.editingCatRow = rowId;
+  else if (which === "pri") state.editingPriRow = rowId;
+  render();
 }
 
 function descEditor(r) {
-const ed = el("div", "fieldedit");
-["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
-const ta = document.createElement("textarea");
-ta.value = (r.description !== null && r.description !== undefined) ? String(r.description) : "";
-ta.placeholder = "Add a note\u2026";
-ed.appendChild(ta);
-const acts = el("div", "fe-actions");
-const save = el("button", "fe-save"); save.textContent = "Save";
-save.onclick = () => { state.editingDescRow = null; setDescription(r.id, ta.value); render(); };
-const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
-cancel.onclick = () => { state.editingDescRow = null; render(); };
-acts.append(save, cancel); ed.appendChild(acts);
-return ed;
+  const ed = el("div", "fieldedit");
+  ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+  const ta = document.createElement("textarea");
+  ta.value = (r.description !== null && r.description !== undefined) ? String(r.description) : "";
+  ta.placeholder = "Add a note\u2026";
+  ed.appendChild(ta);
+  const acts = el("div", "fe-actions");
+  const save = el("button", "fe-save"); save.textContent = "Save";
+  save.onclick = () => { state.editingDescRow = null; setDescription(r.id, ta.value); render(); };
+  const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
+  cancel.onclick = () => { state.editingDescRow = null; render(); };
+  acts.append(save, cancel); ed.appendChild(acts);
+  return ed;
 }
 
 function assigneeEditor(r) {
-const ed = el("div", "fieldedit");
-["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
-const initial = recAsgs(r).filter(a => a !== UNASSIGNED);
-const known = distinctValues(recAsgs).filter(v => v !== UNASSIGNED);
-const picker = buildTagPicker(initial, state.asgMulti, known, "name");
-ed.appendChild(picker.element);
-const acts = el("div", "fe-actions");
-const save = el("button", "fe-save"); save.textContent = "Save";
-save.onclick = () => { state.editingAsgRow = null; setAssignees(r.id, picker.get()); render(); };
-const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
-cancel.onclick = () => { state.editingAsgRow = null; render(); };
-acts.append(save, cancel); ed.appendChild(acts);
-return ed;
+  const ed = el("div", "fieldedit");
+  ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+  const initial = recAsgs(r).filter(a => a !== UNASSIGNED);
+  const known = distinctValues(recAsgs).filter(v => v !== UNASSIGNED);
+  const picker = buildTagPicker(initial, state.asgMulti, known, "name");
+  ed.appendChild(picker.element);
+  const acts = el("div", "fe-actions");
+  const save = el("button", "fe-save"); save.textContent = "Save";
+  save.onclick = () => { state.editingAsgRow = null; setAssignees(r.id, picker.get()); render(); };
+  const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
+  cancel.onclick = () => { state.editingAsgRow = null; render(); };
+  acts.append(save, cancel); ed.appendChild(acts);
+  return ed;
 }
 
 function categoryEditor(r) {
-const ed = el("div", "fieldedit");
-["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
-const initial = recCats(r).filter(c => c !== NO_CAT);
-const known = distinctValues(recCats).filter(c => c !== NO_CAT);
-const picker = buildTagPicker(initial, state.catMulti, known, "category");
-ed.appendChild(picker.element);
-const acts = el("div", "fe-actions");
-const save = el("button", "fe-save"); save.textContent = "Save";
-save.onclick = () => { state.editingCatRow = null; setCategory(r.id, picker.get()); render(); };
-const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
-cancel.onclick = () => { state.editingCatRow = null; render(); };
-acts.append(save, cancel); ed.appendChild(acts);
-return ed;
+  const ed = el("div", "fieldedit");
+  ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+  const initial = recCats(r).filter(c => c !== NO_CAT);
+  const known = distinctValues(recCats).filter(c => c !== NO_CAT);
+  const picker = buildTagPicker(initial, state.catMulti, known, "category");
+  ed.appendChild(picker.element);
+  const acts = el("div", "fe-actions");
+  const save = el("button", "fe-save"); save.textContent = "Save";
+  save.onclick = () => { state.editingCatRow = null; setCategory(r.id, picker.get()); render(); };
+  const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
+  cancel.onclick = () => { state.editingCatRow = null; render(); };
+  acts.append(save, cancel); ed.appendChild(acts);
+  return ed;
 }
 
 function priorityEditor(r) {
-const ed = el("div", "fieldedit");
-["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+  const ed = el("div", "fieldedit");
+  ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
 
-if (state.priIsBool) {
-let on = isImportant(r.priority);
-const picker = el("div", "picker");
-const chip = el("div", "pchip" + (on ? " sel" : ""));
-chip.textContent = "Important!";
-chip.onclick = (e) => { e.stopPropagation(); on = !on; chip.classList.toggle("sel", on); };
-picker.appendChild(chip);
-ed.appendChild(picker);
-const acts = el("div", "fe-actions");
-const save = el("button", "fe-save"); save.textContent = "Save";
-save.onclick = () => { state.editingPriRow = null; writeField(r.id, state.cols.Priority, on, "priority"); render(); };
-const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
-cancel.onclick = () => { state.editingPriRow = null; render(); };
-acts.append(save, cancel); ed.appendChild(acts);
-return ed;
-}
+  if (state.priIsBool) {
+    let on = isImportant(r.priority);
+    const picker = el("div", "picker");
+    const chip = el("div", "pchip" + (on ? " sel" : ""));
+    chip.textContent = "Important!";
+    chip.onclick = (e) => { e.stopPropagation(); on = !on; chip.classList.toggle("sel", on); };
+    picker.appendChild(chip);
+    ed.appendChild(picker);
+    const acts = el("div", "fe-actions");
+    const save = el("button", "fe-save"); save.textContent = "Save";
+    save.onclick = () => { state.editingPriRow = null; writeField(r.id, state.cols.Priority, on, "priority"); render(); };
+    const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
+    cancel.onclick = () => { state.editingPriRow = null; render(); };
+    acts.append(save, cancel); ed.appendChild(acts);
+    return ed;
+  }
 
-const has = r.priority !== null && r.priority !== undefined && r.priority !== "";
-const initial = has ? [String(r.priority)] : [];
-const known = distinctValues(rr => {
-const v = rr.priority; return (v === null || v === undefined || v === "") ? [] : [String(v)];
-});
-const picker = buildTagPicker(initial, false, known, "priority");
-ed.appendChild(picker.element);
-const acts = el("div", "fe-actions");
-const save = el("button", "fe-save"); save.textContent = "Save";
-save.onclick = () => { state.editingPriRow = null; setPriority(r.id, picker.get()); render(); };
-const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
-cancel.onclick = () => { state.editingPriRow = null; render(); };
-acts.append(save, cancel); ed.appendChild(acts);
-return ed;
+  const has = r.priority !== null && r.priority !== undefined && r.priority !== "";
+  const initial = has ? [String(r.priority)] : [];
+  const known = distinctValues(rr => {
+    const v = rr.priority; return (v === null || v === undefined || v === "") ? [] : [String(v)];
+  });
+  const picker = buildTagPicker(initial, false, known, "priority");
+  ed.appendChild(picker.element);
+  const acts = el("div", "fe-actions");
+  const save = el("button", "fe-save"); save.textContent = "Save";
+  save.onclick = () => { state.editingPriRow = null; setPriority(r.id, picker.get()); render(); };
+  const cancel = el("button", "fe-cancel"); cancel.textContent = "Cancel";
+  cancel.onclick = () => { state.editingPriRow = null; render(); };
+  acts.append(save, cancel); ed.appendChild(acts);
+  return ed;
 }
 
 // Self-contained multi/single tag picker; manages its own selection without a global re-render.
 function buildTagPicker(initial, multi, known, noun) {
-const wrap = el("div", "picker-wrap");
-const picker = el("div", "picker");
-const selected = new Set(initial || []);
-const all = Array.from(new Set((known || []).concat(Array.from(selected))));
-function sync() { picker.querySelectorAll(".pchip").forEach(c => c.classList.toggle("sel", selected.has(c.textContent))); }
-function chipFor(name) {
-const chip = el("div", "pchip" + (selected.has(name) ? " sel" : ""));
-chip.textContent = name;
-chip.onclick = (e) => {
-e.stopPropagation();
-if (selected.has(name)) selected.delete(name);
-else { if (!multi) selected.clear(); selected.add(name); }
-sync();
-};
-return chip;
-}
-all.forEach(n => picker.appendChild(chipFor(n)));
-wrap.appendChild(picker);
-const add = el("div", "padd");
-const inp = document.createElement("input"); inp.type = "text";
-inp.placeholder = multi ? ("Add a " + (noun || "value") + "\u2026") : ("Or type a " + (noun || "value") + "\u2026");
-const btn = el("button"); btn.textContent = "Add";
-const doAdd = () => {
-const v = inp.value.trim(); if (!v) return;
-if (!multi) selected.clear();
-selected.add(v);
-const exists = Array.prototype.some.call(picker.querySelectorAll(".pchip"), c => c.textContent === v);
-if (!exists) picker.appendChild(chipFor(v));
-sync(); inp.value = "";
-};
-btn.onclick = (e) => { e.stopPropagation(); doAdd(); };
-inp.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); doAdd(); } };
-add.append(inp, btn); wrap.appendChild(add);
-return { element: wrap, get: () => Array.from(selected) };
+  const wrap = el("div", "picker-wrap");
+  const picker = el("div", "picker");
+  const selected = new Set(initial || []);
+  const all = Array.from(new Set((known || []).concat(Array.from(selected))));
+  function sync() { picker.querySelectorAll(".pchip").forEach(c => c.classList.toggle("sel", selected.has(c.textContent))); }
+  function chipFor(name) {
+    const chip = el("div", "pchip" + (selected.has(name) ? " sel" : ""));
+    chip.textContent = name;
+    chip.onclick = (e) => {
+      e.stopPropagation();
+      if (selected.has(name)) selected.delete(name);
+      else { if (!multi) selected.clear(); selected.add(name); }
+      sync();
+    };
+    return chip;
+  }
+  all.forEach(n => picker.appendChild(chipFor(n)));
+  wrap.appendChild(picker);
+  const add = el("div", "padd");
+  const inp = document.createElement("input"); inp.type = "text";
+  inp.placeholder = multi ? ("Add a " + (noun || "value") + "\u2026") : ("Or type a " + (noun || "value") + "\u2026");
+  const btn = el("button"); btn.textContent = "Add";
+  const doAdd = () => {
+    const v = inp.value.trim(); if (!v) return;
+    if (!multi) selected.clear();
+    selected.add(v);
+    const exists = Array.prototype.some.call(picker.querySelectorAll(".pchip"), c => c.textContent === v);
+    if (!exists) picker.appendChild(chipFor(v));
+    sync(); inp.value = "";
+  };
+  btn.onclick = (e) => { e.stopPropagation(); doAdd(); };
+  inp.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); doAdd(); } };
+  add.append(inp, btn); wrap.appendChild(add);
+  return { element: wrap, get: () => Array.from(selected) };
 }
 
 // Clickable status pill with a dropdown that writes the chosen status back to Grist.
 function statusControl(r, kind) {
-const wrap = el("div", "statuswrap");
-const has = r.status !== null && r.status !== undefined && String(r.status).trim() !== "";
-const pill = el("button", "statuspill" + (kind === "complete" || kind === "ready" ? " is-complete" : ""));
-pill.innerHTML = esc(has ? String(r.status) : "Set status") + ' <span class="pcaret">&#9662;</span>';
-pill.onclick = (e) => { e.stopPropagation(); const wasOpen = state.openStatusRow === r.id; clearTransient(); state.openStatusRow = wasOpen ? null : r.id; render(); };
-wrap.appendChild(pill);
+  const wrap = el("div", "statuswrap");
+  const has = r.status !== null && r.status !== undefined && String(r.status).trim() !== "";
+  const pill = el("button", "statuspill" + (kind === "complete" || kind === "ready" ? " is-complete" : ""));
+  pill.innerHTML = esc(has ? String(r.status) : "Set status") + ' <span class="pcaret">&#9662;</span>';
+  pill.onclick = (e) => { e.stopPropagation(); const wasOpen = state.openStatusRow === r.id; clearTransient(); state.openStatusRow = wasOpen ? null : r.id; render(); };
+  wrap.appendChild(pill);
 
-if (state.openStatusRow === r.id) {
-const menu = el("div", "statusmenu");
-menu.onclick = (e) => e.stopPropagation();
-const opts = statusOptions();
-if (!opts.length) menu.appendChild(Object.assign(el("div", "empty"), { textContent: "No status values yet." }));
-opts.forEach(s => {
-const item = el("button", "statusitem" + (String(r.status) === s ? " current" : ""));
-item.textContent = s;
-item.onclick = () => { state.openStatusRow = null; setStatus(r.id, s); render(); };
-menu.appendChild(item);
-});
-if (has) {
-const clr = el("button", "statusitem clear"); clr.textContent = "Clear status";
-clr.onclick = () => { state.openStatusRow = null; setStatus(r.id, null); render(); };
-menu.appendChild(clr);
-}
-wrap.appendChild(menu);
-}
-return wrap;
+  if (state.openStatusRow === r.id) {
+    const menu = el("div", "statusmenu");
+    menu.onclick = (e) => e.stopPropagation();
+    const opts = statusOptions();
+    if (!opts.length) menu.appendChild(Object.assign(el("div", "empty"), { textContent: "No status values yet." }));
+    opts.forEach(s => {
+      const item = el("button", "statusitem" + (String(r.status) === s ? " current" : ""));
+      item.textContent = s;
+      item.onclick = () => { state.openStatusRow = null; setStatus(r.id, s); render(); };
+      menu.appendChild(item);
+    });
+    if (has) {
+      const clr = el("button", "statusitem clear"); clr.textContent = "Clear status";
+      clr.onclick = () => { state.openStatusRow = null; setStatus(r.id, null); render(); };
+      menu.appendChild(clr);
+    }
+    wrap.appendChild(menu);
+  }
+  return wrap;
 }
 
 // Distinct status values currently present in the table (used to populate the menu).
 function statusOptions() {
-const set = new Set();
-for (const r of state.records) {
-const s = r.status;
-if (s !== null && s !== undefined && String(s).trim() !== "") set.add(String(s));
-}
-return Array.from(set).sort((a, b) => a.localeCompare(b));
+  const set = new Set();
+  for (const r of state.records) {
+    const s = r.status;
+    if (s !== null && s !== undefined && String(s).trim() !== "") set.add(String(s));
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
 
 function pad2(n) { return String(n).padStart(2, "0"); }
 function pad4(n) { return String(n).padStart(4, "0"); }
 function fmtShortDate(due) {
-let s = MONTHS[due.mo].slice(0, 3) + " " + due.d;
-if (due.y !== (new Date()).getFullYear()) s += ", " + due.y;
-return s;
+  let s = MONTHS[due.mo].slice(0, 3) + " " + due.d;
+  if (due.y !== (new Date()).getFullYear()) s += ", " + due.y;
+  return s;
 }
 // Add N days to the date currently in the picker (so offsets stack and build on the deadline's date).
 function shiftDateInput(input, n) {
-const base = input.value ? input.value.split("-").map(Number) : null;
-const d = base ? new Date(base[0], base[1] - 1, base[2]) : stripTime(new Date());
-d.setDate(d.getDate() + n);
-input.value = pad4(d.getFullYear()) + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  const base = input.value ? input.value.split("-").map(Number) : null;
+  const d = base ? new Date(base[0], base[1] - 1, base[2]) : stripTime(new Date());
+  d.setDate(d.getDate() + n);
+  input.value = pad4(d.getFullYear()) + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
 }
 
 // Encode a chosen date/time back to a Grist timestamp (UTC midnight for Date, local moment for DateTime).
 function encodeDue(dateStr, timeStr) {
-const p = dateStr.split("-").map(Number);
-const Y = p[0], M = p[1], D = p[2];
-if (state.dueIsDateTime) {
-let h = 9, mi = 0;
-if (timeStr) { const t = timeStr.split(":").map(Number); h = t[0]; mi = t[1]; }
-return new Date(Y, M - 1, D, h, mi, 0, 0).getTime() / 1000;
-}
-return Date.UTC(Y, M - 1, D) / 1000;
+  const p = dateStr.split("-").map(Number);
+  const Y = p[0], M = p[1], D = p[2];
+  if (state.dueIsDateTime) {
+    let h = 9, mi = 0;
+    if (timeStr) { const t = timeStr.split(":").map(Number); h = t[0]; mi = t[1]; }
+    return new Date(Y, M - 1, D, h, mi, 0, 0).getTime() / 1000;
+  }
+  return Date.UTC(Y, M - 1, D) / 1000;
 }
 
 // Clickable due time/date that opens an inline editor writing the new date back to Grist.
 function dueCell(r, compact) {
-const wrap = el("div", "duewrap");
-let label;
-if (r.due.timeStr) label = r.due.timeStr;       // timed: always show the time
-else if (compact) label = "";                   // week chip: day is already in the column header
-else label = fmtShortDate(r.due);               // list views: show the assigned date
-const btn = el("button", "time editable" + (label ? "" : " bare"));
-btn.title = "Click to change the due date";
-btn.innerHTML = (label ? esc(label) + " " : "") + '<span class="pen">\u270E</span>';
-btn.onclick = (e) => {
-e.stopPropagation();
-const wasOpen = state.openDateRow === r.id;
-clearTransient();
-state.openDateRow = wasOpen ? null : r.id;
-render();
-};
-wrap.appendChild(btn);
+  const wrap = el("div", "duewrap");
+  let label;
+  if (r.due.timeStr) label = r.due.timeStr;       // timed: always show the time
+  else if (compact) label = "";                   // week chip: day is already in the column header
+  else label = fmtShortDate(r.due);               // list views: show the assigned date
+  const btn = el("button", "time editable" + (label ? "" : " bare"));
+  btn.title = "Click to change the due date";
+  btn.innerHTML = (label ? esc(label) + " " : "") + '<span class="pen">\u270E</span>';
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    const wasOpen = state.openDateRow === r.id;
+    clearTransient();
+    state.openDateRow = wasOpen ? null : r.id;
+    render();
+  };
+  wrap.appendChild(btn);
   if (state.mapped.daysLeft && r.daysLeft !== null && r.daysLeft !== undefined && r.daysLeft !== "") {
     const dl = Number(r.daysLeft);
     if (Number.isFinite(dl)) {
@@ -1179,140 +1171,140 @@ wrap.appendChild(btn);
       wrap.appendChild(Object.assign(el("div", "daysleft " + cls), { textContent: text }));
     }
   }
-if (state.openDateRow === r.id) wrap.appendChild(dateEditor(r));
-return wrap;
+  if (state.openDateRow === r.id) wrap.appendChild(dateEditor(r));
+  return wrap;
 }
 
 function dateEditor(r) {
-const ed = el("div", "dateeditor");
-["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
+  const ed = el("div", "dateeditor");
+  ["click", "mousedown"].forEach(ev => ed.addEventListener(ev, e => e.stopPropagation()));
 
-const dateIn = document.createElement("input");
-dateIn.type = "date";
-dateIn.value = pad4(r.due.y) + "-" + pad2(r.due.mo + 1) + "-" + pad2(r.due.d);
-ed.appendChild(dateIn);
+  const dateIn = document.createElement("input");
+  dateIn.type = "date";
+  dateIn.value = pad4(r.due.y) + "-" + pad2(r.due.mo + 1) + "-" + pad2(r.due.d);
+  ed.appendChild(dateIn);
 
-let timeIn = null;
-if (state.dueIsDateTime) {
-timeIn = document.createElement("input");
-timeIn.type = "time";
-const mod = r.due.minuteOfDay >= 0 ? r.due.minuteOfDay : 9 * 60; // default 9:00 AM
-timeIn.value = pad2(Math.floor(mod / 60)) + ":" + pad2(mod % 60);
-ed.appendChild(timeIn);
-}
+  let timeIn = null;
+  if (state.dueIsDateTime) {
+    timeIn = document.createElement("input");
+    timeIn.type = "time";
+    const mod = r.due.minuteOfDay >= 0 ? r.due.minuteOfDay : 9 * 60; // default 9:00 AM
+    timeIn.value = pad2(Math.floor(mod / 60)) + ":" + pad2(mod % 60);
+    ed.appendChild(timeIn);
+  }
 
-// Relative offsets, applied to whatever date is currently in the picker (composable).
-const sc = el("div", "de-shortcuts");
-[["+1d", 1, "Next day"], ["+7d", 7, "In 7 days"], ["+14d", 14, "In 14 days"], ["+30d", 30, "In 30 days"]].forEach(([lbl, n, tip]) => {
-const b = el("button"); b.textContent = lbl; b.title = tip;
-b.onclick = () => shiftDateInput(dateIn, n);
-sc.appendChild(b);
-});
-ed.appendChild(sc);
+  // Relative offsets, applied to whatever date is currently in the picker (composable).
+  const sc = el("div", "de-shortcuts");
+  [["+1d", 1, "Next day"], ["+7d", 7, "In 7 days"], ["+14d", 14, "In 14 days"], ["+30d", 30, "In 30 days"]].forEach(([lbl, n, tip]) => {
+    const b = el("button"); b.textContent = lbl; b.title = tip;
+    b.onclick = () => shiftDateInput(dateIn, n);
+    sc.appendChild(b);
+  });
+  ed.appendChild(sc);
 
-const acts = el("div", "de-actions");
-const save = el("button", "de-save"); save.textContent = "Save";
-save.onclick = () => {
-if (!dateIn.value) return;
-const ts = encodeDue(dateIn.value, timeIn ? timeIn.value : null);
-state.openDateRow = null;
-setDue(r.id, ts);
-render();
-};
-const cancel = el("button", "de-cancel"); cancel.textContent = "Cancel";
-cancel.onclick = () => { state.openDateRow = null; render(); };
-acts.append(save, cancel);
-ed.appendChild(acts);
-return ed;
+  const acts = el("div", "de-actions");
+  const save = el("button", "de-save"); save.textContent = "Save";
+  save.onclick = () => {
+    if (!dateIn.value) return;
+    const ts = encodeDue(dateIn.value, timeIn ? timeIn.value : null);
+    state.openDateRow = null;
+    setDue(r.id, ts);
+    render();
+  };
+  const cancel = el("button", "de-cancel"); cancel.textContent = "Cancel";
+  cancel.onclick = () => { state.openDateRow = null; render(); };
+  acts.append(save, cancel);
+  ed.appendChild(acts);
+  return ed;
 }
 
 function dayListEl(key, compact) {
-const recs = recordsForKey(key);
-if (!recs.length) { const e = el("div", "empty"); e.textContent = "No deadlines."; return e; }
-const frag = document.createDocumentFragment();
-recs.forEach(r => frag.appendChild(rowEl(r, compact)));
-return frag;
+  const recs = recordsForKey(key);
+  if (!recs.length) { const e = el("div", "empty"); e.textContent = "No deadlines."; return e; }
+  const frag = document.createDocumentFragment();
+  recs.forEach(r => frag.appendChild(rowEl(r, compact)));
+  return frag;
 }
 
 /* ---- Month ---- */
 function renderMonth() {
-const wrap = el("div", "month");
-const head = el("div", "weekhead");
-DOW.forEach(d => head.appendChild(Object.assign(el("div"), { textContent: d })));
-wrap.appendChild(head);
+  const wrap = el("div", "month");
+  const head = el("div", "weekhead");
+  DOW.forEach(d => head.appendChild(Object.assign(el("div"), { textContent: d })));
+  wrap.appendChild(head);
 
-const grid = el("div", "grid");
-const first = new Date(state.focus.getFullYear(), state.focus.getMonth(), 1);
-const start = startOfWeek(first);
-const todayKey = dayKeyFromDate(new Date());
+  const grid = el("div", "grid");
+  const first = new Date(state.focus.getFullYear(), state.focus.getMonth(), 1);
+  const start = startOfWeek(first);
+  const todayKey = dayKeyFromDate(new Date());
 
-for (let i = 0; i < 42; i++) {
-const d = addDays(start, i);
-const key = dayKeyFromDate(d);
-const outside = d.getMonth() !== state.focus.getMonth();
-const cell = el("div", "cell" + (outside ? " outside" : "")
-+ (key === todayKey ? " today" : "") + (key === state.selectedKey ? " selected" : ""));
-cell.appendChild(Object.assign(el("div", "daynum"), { textContent: d.getDate() }));
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(start, i);
+    const key = dayKeyFromDate(d);
+    const outside = d.getMonth() !== state.focus.getMonth();
+    const cell = el("div", "cell" + (outside ? " outside" : "")
+      + (key === todayKey ? " today" : "") + (key === state.selectedKey ? " selected" : ""));
+    cell.appendChild(Object.assign(el("div", "daynum"), { textContent: d.getDate() }));
 
-const recs = recordsForKey(key);
-const shown = recs.slice(0, 3);
-shown.forEach(r => {
-const kind = classify(r);
-const chip = el("div", "chip" + (kind !== "normal" ? " chip-" + kind : ""));
-chip.style.borderLeftColor = stripeColor(r, kind);
-const tt = r.due.timeStr ? '<span class="t">' + esc(r.due.timeStr) + "</span>" : "";
-const pre = kind === "complete" ? "\u2713 " : "";
-chip.innerHTML = tt + esc(pre + (r.title || "(untitled)"));
-cell.appendChild(chip);
-});
-if (recs.length > shown.length) cell.appendChild(Object.assign(el("div", "more"), { textContent: "+" + (recs.length - shown.length) + " more" }));
+    const recs = recordsForKey(key);
+    const shown = recs.slice(0, 3);
+    shown.forEach(r => {
+      const kind = classify(r);
+      const chip = el("div", "chip" + (kind !== "normal" ? " chip-" + kind : ""));
+      chip.style.borderLeftColor = stripeColor(r, kind);
+      const tt = r.due.timeStr ? '<span class="t">' + esc(r.due.timeStr) + "</span>" : "";
+      const pre = kind === "complete" ? "\u2713 " : "";
+      chip.innerHTML = tt + esc(pre + (r.title || "(untitled)"));
+      cell.appendChild(chip);
+    });
+    if (recs.length > shown.length) cell.appendChild(Object.assign(el("div", "more"), { textContent: "+" + (recs.length - shown.length) + " more" }));
 
-cell.onclick = () => { state.selectedKey = key; state.focus = stripTime(d); render(); };
-grid.appendChild(cell);
-}
-wrap.appendChild(grid);
+    cell.onclick = () => { state.selectedKey = key; state.focus = stripTime(d); render(); };
+    grid.appendChild(cell);
+  }
+  wrap.appendChild(grid);
 
-// Selected-day detail panel
-const panel = el("div", "daypanel");
-const sel = parseKeyToDate(state.selectedKey);
-panel.appendChild(Object.assign(el("h3"), { textContent: "Deadlines on " + DOW[sel.getDay()] + ", " + MONTHS[sel.getMonth()] + " " + sel.getDate() }));
-const addBtn = el("button", "addday");
-addBtn.innerHTML = "\uFF0B Add deadline on this day";
-addBtn.onclick = (e) => { e.stopPropagation(); openNewTask(state.selectedKey); };
-panel.appendChild(addBtn);
-const list = el("div", "list");
-list.appendChild(dayListEl(state.selectedKey, false));
-panel.appendChild(list);
-wrap.appendChild(panel);
-return wrap;
+  // Selected-day detail panel
+  const panel = el("div", "daypanel");
+  const sel = parseKeyToDate(state.selectedKey);
+  panel.appendChild(Object.assign(el("h3"), { textContent: "Deadlines on " + DOW[sel.getDay()] + ", " + MONTHS[sel.getMonth()] + " " + sel.getDate() }));
+  const addBtn = el("button", "addday");
+  addBtn.innerHTML = "\uFF0B Add deadline on this day";
+  addBtn.onclick = (e) => { e.stopPropagation(); openNewTask(state.selectedKey); };
+  panel.appendChild(addBtn);
+  const list = el("div", "list");
+  list.appendChild(dayListEl(state.selectedKey, false));
+  panel.appendChild(list);
+  wrap.appendChild(panel);
+  return wrap;
 }
 
 /* ---- Week ---- */
 function renderWeek() {
-const wrap = el("div", "week");
-const start = startOfWeek(state.focus);
-const todayKey = dayKeyFromDate(new Date());
-for (let i = 0; i < 7; i++) {
-const d = addDays(start, i);
-const key = dayKeyFromDate(d);
-const col = el("div", "weekcol" + (key === todayKey ? " today" : "") + (key === state.selectedKey ? " selected" : ""));
-const ch = el("div", "colhead");
-ch.innerHTML = '<div class="dow">' + DOW[d.getDay()] + '</div><div class="dnum">' + d.getDate() + "</div>";
-ch.onclick = () => { state.selectedKey = key; state.focus = stripTime(d); render(); };
-col.appendChild(ch);
-const cb = el("div", "colbody");
-cb.appendChild(dayListEl(key, true));
-col.appendChild(cb);
-wrap.appendChild(col);
-}
-return wrap;
+  const wrap = el("div", "week");
+  const start = startOfWeek(state.focus);
+  const todayKey = dayKeyFromDate(new Date());
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(start, i);
+    const key = dayKeyFromDate(d);
+    const col = el("div", "weekcol" + (key === todayKey ? " today" : "") + (key === state.selectedKey ? " selected" : ""));
+    const ch = el("div", "colhead");
+    ch.innerHTML = '<div class="dow">' + DOW[d.getDay()] + '</div><div class="dnum">' + d.getDate() + "</div>";
+    ch.onclick = () => { state.selectedKey = key; state.focus = stripTime(d); render(); };
+    col.appendChild(ch);
+    const cb = el("div", "colbody");
+    cb.appendChild(dayListEl(key, true));
+    col.appendChild(cb);
+    wrap.appendChild(col);
+  }
+  return wrap;
 }
 
 /* ---- Day ---- */
 function renderDay() {
-const wrap = el("div", "list");
-wrap.appendChild(dayListEl(dayKeyFromDate(state.focus), false));
-return wrap;
+  const wrap = el("div", "list");
+  wrap.appendChild(dayListEl(dayKeyFromDate(state.focus), false));
+  return wrap;
 }
 
 /* ===================== DOM util ===================== */
@@ -1326,241 +1318,238 @@ function labelEl(text) { return Object.assign(el("label"), { textContent: text }
 
 // Text input backed by a datalist of known values (choose existing or type new).
 function datalistInput(values, id) {
-const wrap = el("div");
-const inp = document.createElement("input"); inp.type = "text"; inp.setAttribute("list", id);
-const dl = document.createElement("datalist"); dl.id = id;
-values.forEach(v => { const o = document.createElement("option"); o.value = v; dl.appendChild(o); });
-wrap.append(inp, dl);
-return { wrap: wrap, value: () => inp.value.trim() };
+  const wrap = el("div");
+  const inp = document.createElement("input"); inp.type = "text"; inp.setAttribute("list", id);
+  const dl = document.createElement("datalist"); dl.id = id;
+  values.forEach(v => { const o = document.createElement("option"); o.value = v; dl.appendChild(o); });
+  wrap.append(inp, dl);
+  return { wrap: wrap, value: () => inp.value.trim() };
 }
 
 function openNewTask(prefillKey) {
-if (!state.haveGrist || !state.mapped.due || !state.mapped.title) return;
-closeModal();
-const overlay = el("div", "modal-overlay");
-overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
-document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { closeModal(); document.removeEventListener("keydown", esc); } });
+  if (!state.haveGrist || !state.mapped.due || !state.mapped.title) return;
+  closeModal();
+  const overlay = el("div", "modal-overlay");
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+  document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { closeModal(); document.removeEventListener("keydown", esc); } });
 
-const modal = el("div", "modal");
-modal.addEventListener("click", e => e.stopPropagation());
-modal.appendChild(Object.assign(el("h3"), { textContent: "New deadline" }));
+  const modal = el("div", "modal");
+  modal.addEventListener("click", e => e.stopPropagation());
+  modal.appendChild(Object.assign(el("h3"), { textContent: "New deadline" }));
 
-modal.appendChild(labelEl("Title"));
-const titleIn = document.createElement("input"); titleIn.type = "text"; titleIn.placeholder = "e.g. File response to MSJ";
-modal.appendChild(titleIn);
+  modal.appendChild(labelEl("Title"));
+  const titleIn = document.createElement("input"); titleIn.type = "text"; titleIn.placeholder = "e.g. File response to MSJ";
+  modal.appendChild(titleIn);
 
-const base = prefillKey ? parseKeyToDate(prefillKey) : new Date();
-modal.appendChild(labelEl(state.dueIsDateTime ? "Due date & time" : "Due date"));
-const row2 = el("div", "row2");
-const dwrap = el("div");
-const dateIn = document.createElement("input"); dateIn.type = "date";
-dateIn.value = pad4(base.getFullYear()) + "-" + pad2(base.getMonth() + 1) + "-" + pad2(base.getDate());
-dwrap.appendChild(dateIn); row2.appendChild(dwrap);
-let timeIn = null;
-if (state.dueIsDateTime) {
-const twrap = el("div");
-timeIn = document.createElement("input"); timeIn.type = "time"; timeIn.value = "09:00";
-twrap.appendChild(timeIn); row2.appendChild(twrap);
-}
-modal.appendChild(row2);
+  const base = prefillKey ? parseKeyToDate(prefillKey) : new Date();
+  modal.appendChild(labelEl(state.dueIsDateTime ? "Due date & time" : "Due date"));
+  const row2 = el("div", "row2");
+  const dwrap = el("div");
+  const dateIn = document.createElement("input"); dateIn.type = "date";
+  dateIn.value = pad4(base.getFullYear()) + "-" + pad2(base.getMonth() + 1) + "-" + pad2(base.getDate());
+  dwrap.appendChild(dateIn); row2.appendChild(dwrap);
+  let timeIn = null;
+  if (state.dueIsDateTime) {
+    const twrap = el("div");
+    timeIn = document.createElement("input"); timeIn.type = "time"; timeIn.value = "09:00";
+    twrap.appendChild(timeIn); row2.appendChild(twrap);
+  }
+  modal.appendChild(row2);
 
-let statusIn = null, catIn = null, priIn = null, priBoolIn = null, asgPicker = null, descIn = null;
-if (state.mapped.status) { modal.appendChild(labelEl("Status")); statusIn = datalistInput(statusOptions(), "nt-status"); modal.appendChild(statusIn.wrap); }
-if (state.mapped.category) { modal.appendChild(labelEl("Category")); catIn = datalistInput(distinctValues(recCats).filter(c => c !== NO_CAT), "nt-cat"); modal.appendChild(catIn.wrap); }
-if (state.mapped.priority) {
-modal.appendChild(labelEl("Priority"));
-if (state.priIsBool) {
-const prow = el("label", "poprow"); prow.style.padding = "2px 0";
-priBoolIn = document.createElement("input"); priBoolIn.type = "checkbox";
-prow.append(priBoolIn, Object.assign(el("span", "label"), { textContent: "Important!" }));
-modal.appendChild(prow);
-} else {
-const pv = distinctValues(r => { const v = r.priority; return (v === null || v === undefined || v === "") ? [] : [String(v)]; });
-priIn = datalistInput(pv, "nt-pri"); modal.appendChild(priIn.wrap);
-}
-}
-if (state.mapped.assignedTo) { modal.appendChild(labelEl("Assigned to")); asgPicker = buildTagPicker([], state.asgMulti, distinctValues(recAsgs).filter(v => v !== UNASSIGNED), "name"); modal.appendChild(asgPicker.element); }
-if (state.mapped.description) { modal.appendChild(labelEl("Description")); descIn = document.createElement("textarea"); modal.appendChild(descIn); }
+  let statusIn = null, catIn = null, priIn = null, priBoolIn = null, asgPicker = null, descIn = null;
+  if (state.mapped.status) { modal.appendChild(labelEl("Status")); statusIn = datalistInput(statusOptions(), "nt-status"); modal.appendChild(statusIn.wrap); }
+  if (state.mapped.category) { modal.appendChild(labelEl("Category")); catIn = datalistInput(distinctValues(recCats).filter(c => c !== NO_CAT), "nt-cat"); modal.appendChild(catIn.wrap); }
+  if (state.mapped.priority) {
+    modal.appendChild(labelEl("Priority"));
+    if (state.priIsBool) {
+      const prow = el("label", "poprow"); prow.style.padding = "2px 0";
+      priBoolIn = document.createElement("input"); priBoolIn.type = "checkbox";
+      prow.append(priBoolIn, Object.assign(el("span", "label"), { textContent: "Important!" }));
+      modal.appendChild(prow);
+    } else {
+      const pv = distinctValues(r => { const v = r.priority; return (v === null || v === undefined || v === "") ? [] : [String(v)]; });
+      priIn = datalistInput(pv, "nt-pri"); modal.appendChild(priIn.wrap);
+    }
+  }
+  if (state.mapped.assignedTo) { modal.appendChild(labelEl("Assigned to")); asgPicker = buildTagPicker([], state.asgMulti, distinctValues(recAsgs).filter(v => v !== UNASSIGNED), "name"); modal.appendChild(asgPicker.element); }
+  if (state.mapped.description) { modal.appendChild(labelEl("Description")); descIn = document.createElement("textarea"); modal.appendChild(descIn); }
 
-const acts = el("div", "modal-actions");
-const createB = el("button", "m-create"); createB.textContent = "Create";
-createB.onclick = () => {
-const title = titleIn.value.trim();
-if (!title) { titleIn.style.borderColor = "var(--red)"; titleIn.focus(); return; }
-if (!dateIn.value) { dateIn.style.borderColor = "var(--red)"; return; }
-const fields = {};
-fields[state.cols.Title] = title;
-fields[state.cols.DueDate] = encodeDue(dateIn.value, timeIn ? timeIn.value : null);
-if (statusIn && statusIn.value()) fields[state.cols.Status] = statusIn.value();
-if (catIn && catIn.value()) fields[state.cols.Category] = state.catMulti ? ["L", catIn.value()] : catIn.value();
-if (priBoolIn) { if (priBoolIn.checked) fields[state.cols.Priority] = true; }
-else if (priIn && priIn.value()) {
-const pv = priIn.value();
-fields[state.cols.Priority] = (pv !== "" && !isNaN(Number(pv))) ? Number(pv) : pv;
-}
-if (asgPicker) { const a = encodeAssignees(asgPicker.get()); if (a !== null) fields[state.cols.AssignedTo] = a; }
-if (descIn && descIn.value.trim()) fields[state.cols.Description] = descIn.value;
-createTask(fields);
-closeModal();
-};
-const cancelB = el("button", "m-cancel"); cancelB.textContent = "Cancel";
-cancelB.onclick = () => closeModal();
-acts.append(createB, cancelB);
-modal.appendChild(acts);
+  const acts = el("div", "modal-actions");
+  const createB = el("button", "m-create"); createB.textContent = "Create";
+  createB.onclick = () => {
+    const title = titleIn.value.trim();
+    if (!title) { titleIn.style.borderColor = "var(--red)"; titleIn.focus(); return; }
+    if (!dateIn.value) { dateIn.style.borderColor = "var(--red)"; return; }
+    const fields = {};
+    fields[state.cols.Title] = title;
+    fields[state.cols.DueDate] = encodeDue(dateIn.value, timeIn ? timeIn.value : null);
+    if (statusIn && statusIn.value()) fields[state.cols.Status] = statusIn.value();
+    if (catIn && catIn.value()) fields[state.cols.Category] = state.catMulti ? ["L", catIn.value()] : catIn.value();
+    if (priBoolIn) { if (priBoolIn.checked) fields[state.cols.Priority] = true; }
+    else if (priIn && priIn.value()) {
+      const pv = priIn.value();
+      fields[state.cols.Priority] = (pv !== "" && !isNaN(Number(pv))) ? Number(pv) : pv;
+    }
+    if (asgPicker) { const a = encodeAssignees(asgPicker.get()); if (a !== null) fields[state.cols.AssignedTo] = a; }
+    if (descIn && descIn.value.trim()) fields[state.cols.Description] = descIn.value;
+    createTask(fields);
+    closeModal();
+  };
+  const cancelB = el("button", "m-cancel"); cancelB.textContent = "Cancel";
+  cancelB.onclick = () => closeModal();
+  acts.append(createB, cancelB);
+  modal.appendChild(acts);
 
-overlay.appendChild(modal);
-document.body.appendChild(overlay);
-titleIn.focus();
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  titleIn.focus();
 }
 
 document.addEventListener("click", () => {
-let changed = false;
-if (state.openPopover) { state.openPopover = null; changed = true; }
-if (state.openStatusRow !== null) { state.openStatusRow = null; changed = true; }
-if (state.openDateRow !== null) { state.openDateRow = null; changed = true; }
-if (changed) render();
+  let changed = false;
+  if (state.openPopover) { state.openPopover = null; changed = true; }
+  if (state.openStatusRow !== null) { state.openStatusRow = null; changed = true; }
+  if (state.openDateRow !== null) { state.openDateRow = null; changed = true; }
+  if (changed) render();
 });
 
 /* ===================== Grist wiring ===================== */
 function selectInGrist(rowId) {
-try { grist.setCursorPos({ rowId }); } catch (e) { /* linked-cursor optional */ }
+  try { grist.setCursorPos({ rowId }); } catch (e) { /* linked-cursor optional */ }
 }
 
 // Write a single field back to the source table, directly from the calendar.
 async function writeField(rowId, colId, value, label) {
-if (!colId) return;
-const fields = {}; fields[colId] = value;
-try {
-await grist.selectedTable.update({ id: rowId, fields: fields });
-} catch (e) {
-try {
-const tid = await grist.selectedTable.getTableId();
-await grist.docApi.applyUserActions([["UpdateRecord", tid, rowId, fields]]);
-} catch (e2) {
-console.error(label + " update failed", e2);
-alert("Could not update " + label + ". The widget needs full (read \u0026 write) access \u2014 check the widget's access setting in the creator panel.");
-}
-}
+  if (!colId) return;
+  const fields = {}; fields[colId] = value;
+  try {
+    await grist.selectedTable.update({ id: rowId, fields: fields });
+  } catch (e) {
+    try {
+      const tid = await grist.selectedTable.getTableId();
+      await grist.docApi.applyUserActions([["UpdateRecord", tid, rowId, fields]]);
+    } catch (e2) {
+      console.error(label + " update failed", e2);
+      alert("Could not update " + label + ". The widget needs full (read \u0026 write) access \u2014 check the widget's access setting in the creator panel.");
+    }
+  }
 }
 function setStatus(rowId, value) { if (state.mapped.status) writeField(rowId, state.statusColId, value, "status"); }
 function setDue(rowId, ts) { if (state.mapped.due) writeField(rowId, state.dueColId, ts, "due date"); }
 function setDescription(rowId, text) {
-if (state.mapped.description) writeField(rowId, state.descColId, (text && text.trim() !== "") ? text : null, "description");
+  if (state.mapped.description) writeField(rowId, state.descColId, (text && text.trim() !== "") ? text : null, "description");
 }
 function encodeMulti(arr, multi) {
-if (!arr || !arr.length) return null;
-return multi ? ["L"].concat(arr) : arr[0];
+  if (!arr || !arr.length) return null;
+  return multi ? ["L"].concat(arr) : arr[0];
 }
 function encodeAssignees(arr) { return encodeMulti(arr, state.asgMulti); }
 function setAssignees(rowId, arr) {
-if (state.mapped.assignedTo) writeField(rowId, state.asgColId, encodeAssignees(arr), "assignee");
+  if (state.mapped.assignedTo) writeField(rowId, state.asgColId, encodeAssignees(arr), "assignee");
 }
 function setCategory(rowId, arr) {
-if (state.mapped.category) writeField(rowId, state.cols.Category, encodeMulti(arr, state.catMulti), "category");
+  if (state.mapped.category) writeField(rowId, state.cols.Category, encodeMulti(arr, state.catMulti), "category");
 }
 function setPriority(rowId, arr) {
-if (!state.mapped.priority) return;
-let v = (arr && arr.length) ? arr[0] : null;
-if (v !== null && v !== "" && !isNaN(Number(v))) v = Number(v);
-writeField(rowId, state.cols.Priority, v, "priority");
+  if (!state.mapped.priority) return;
+  let v = (arr && arr.length) ? arr[0] : null;
+  if (v !== null && v !== "" && !isNaN(Number(v))) v = Number(v);
+  writeField(rowId, state.cols.Priority, v, "priority");
 }
 async function createTask(fields) {
-try {
-await grist.selectedTable.create({ fields: fields });
-} catch (e) {
-try {
-const tid = await grist.selectedTable.getTableId();
-await grist.docApi.applyUserActions([["AddRecord", tid, null, fields]]);
-} catch (e2) {
-console.error("create failed", e2);
-alert("Could not create the deadline. The widget needs full (read \u0026 write) access \u2014 check the widget's access setting in the creator panel.");
-}
-}
+  try {
+    await grist.selectedTable.create({ fields: fields });
+  } catch (e) {
+    try {
+      const tid = await grist.selectedTable.getTableId();
+      await grist.docApi.applyUserActions([["AddRecord", tid, null, fields]]);
+    } catch (e2) {
+      console.error("create failed", e2);
+      alert("Could not create the deadline. The widget needs full (read \u0026 write) access \u2014 check the widget's access setting in the creator panel.");
+    }
+  }
 }
 
 // Resolve relevant column types (Date vs DateTime, single vs list) from doc metadata.
 async function detectColumnTypes() {
-try {
-const tableId = await grist.selectedTable.getTableId();
-const tables = await grist.docApi.fetchTable("_grist_Tables");
-let ref = null;
-for (let i = 0; i < tables.id.length; i++) { if (tables.tableId[i] === tableId) { ref = tables.id[i]; break; } }
-const cols = await grist.docApi.fetchTable("_grist_Tables_column");
-const typeOf = (colId) => {
-if (!colId) return null;
-for (let i = 0; i < cols.id.length; i++) {
-if (cols.colId[i] === colId && (ref === null || cols.parentId[i] === ref)) return String(cols.type[i] || "");
-}
-return null;
-};
-const isList = (t) => t.indexOf("ChoiceList") === 0 || t.indexOf("RefList") === 0;
-const dt = typeOf(state.cols.DueDate);
-if (dt !== null) { state.dueTypeFromMeta = dt.indexOf("DateTime") === 0; state.dueIsDateTime = state.dueTypeFromMeta; }
-const at = typeOf(state.cols.AssignedTo);
-if (at !== null) { state.asgMulti = isList(at); state.asgTypeKnown = true; }
-const ct = typeOf(state.cols.Category);
-if (ct !== null) { state.catMulti = isList(ct); state.catTypeKnown = true; }
-const pt = typeOf(state.cols.Priority);
-if (pt !== null) { state.priIsBool = pt === "Bool"; state.priTypeKnown = true; }
-render();
-} catch (e) { /* keep data-based heuristics */ }
+  try {
+    const tableId = await grist.selectedTable.getTableId();
+    const tables = await grist.docApi.fetchTable("_grist_Tables");
+    let ref = null;
+    for (let i = 0; i < tables.id.length; i++) { if (tables.tableId[i] === tableId) { ref = tables.id[i]; break; } }
+    const cols = await grist.docApi.fetchTable("_grist_Tables_column");
+    const typeOf = (colId) => {
+      if (!colId) return null;
+      for (let i = 0; i < cols.id.length; i++) {
+        if (cols.colId[i] === colId && (ref === null || cols.parentId[i] === ref)) return String(cols.type[i] || "");
+      }
+      return null;
+    };
+    const isList = (t) => t.indexOf("ChoiceList") === 0 || t.indexOf("RefList") === 0;
+    const dt = typeOf(state.cols.DueDate);
+    if (dt !== null) { state.dueTypeFromMeta = dt.indexOf("DateTime") === 0; state.dueIsDateTime = state.dueTypeFromMeta; }
+    const at = typeOf(state.cols.AssignedTo);
+    if (at !== null) { state.asgMulti = isList(at); state.asgTypeKnown = true; }
+    const ct = typeOf(state.cols.Category);
+    if (ct !== null) { state.catMulti = isList(ct); state.catTypeKnown = true; }
+    const pt = typeOf(state.cols.Priority);
+    if (pt !== null) { state.priIsBool = pt === "Bool"; state.priTypeKnown = true; }
+    render();
+  } catch (e) { /* keep data-based heuristics */ }
 }
 
 function persist() {
-if (!state.haveGrist) return;
-try {
-grist.setOptions({
-view: state.view,
-sortByPriority: state.sortByPriority,
-sortDir: state.sortDir,
-hiddenCats: Array.from(state.hiddenCats),
-hiddenAsgs: Array.from(state.hiddenAsgs),
-hiddenStatuses: Array.from(state.hiddenStatuses),
-redCats: Array.from(state.redCats),
-});
-} catch (e) {}
+  if (!state.haveGrist) return;
+  try {
+    grist.setOptions({
+      view: state.view,
+      sortByPriority: state.sortByPriority,
+      sortDir: state.sortDir,
+      hiddenCats: Array.from(state.hiddenCats),
+      hiddenAsgs: Array.from(state.hiddenAsgs),
+      hiddenStatuses: Array.from(state.hiddenStatuses),
+      redCats: Array.from(state.redCats),
+    });
+  } catch (e) {}
 }
 
 // Read a logical column's value straight from the raw record using the
 // mappings Grist passes to onRecords. Robust against mapColumnNames returning null.
 function pick(rec, mappings, logical) {
-const real = mappings ? mappings[logical] : null;
-if (real === undefined || real === null) return undefined;
-if (Array.isArray(real)) return real.map(c => rec[c]); // allowMultiple mappings
-return rec[real];
+  const real = mappings ? mappings[logical] : null;
+  if (real === undefined || real === null) return undefined;
+  if (Array.isArray(real)) return real.map(c => rec[c]); // allowMultiple mappings
+  return rec[real];
 }
 
 function ingest(records, mappings) {
-mappings = mappings || {};
-state.mapped = {
-due: !!mappings.DueDate,
-title: !!mappings.Title,
-category: !!mappings.Category,
-assignedTo: !!mappings.AssignedTo,
-priority: !!mappings.Priority,
-status: !!mappings.Status,
-description: !!mappings.Description,
+  mappings = mappings || {};
+  state.mapped = {
+    due: !!mappings.DueDate,
+    title: !!mappings.Title,
+    category: !!mappings.Category,
+    assignedTo: !!mappings.AssignedTo,
+    priority: !!mappings.Priority,
+    status: !!mappings.Status,
+    description: !!mappings.Description,
     daysLeft: !!mappings.DaysLeft,
-};
-state.cols = {
-DueDate: mappings.DueDate || null,
-Title: mappings.Title || null,
-Status: mappings.Status || null,
-Category: mappings.Category || null,
-AssignedTo: mappings.AssignedTo || null,
-Priority: mappings.Priority || null,
-Description: mappings.Description || null,
-};
-state.statusColId = mappings.Status || null;
-state.dueColId = mappings.DueDate || null;
-state.descColId = mappings.Description || null;
-state.asgColId = mappings.AssignedTo || null;
-const out = [];
-  let unscheduled = 0;
+  };
+  state.cols = {
+    DueDate: mappings.DueDate || null,
+    Title: mappings.Title || null,
+    Status: mappings.Status || null,
+    Category: mappings.Category || null,
+    AssignedTo: mappings.AssignedTo || null,
+    Priority: mappings.Priority || null,
+    Description: mappings.Description || null,
+  };
+  state.statusColId = mappings.Status || null;
+  state.dueColId = mappings.DueDate || null;
+  state.descColId = mappings.Description || null;
+  state.asgColId = mappings.AssignedTo || null;
+  const out = [];
   const unplaced = [];
-for (const rec of (records || [])) {
-    const due = parseDue(pick(rec, mappings, "DueDate"));
-    if (!due) { unscheduled++; continue; }
+  for (const rec of (records || [])) {
     const rawDue = pick(rec, mappings, "DueDate");
     const due = parseDue(rawDue);
     if (!due) {
@@ -1574,81 +1563,80 @@ for (const rec of (records || [])) {
       });
       continue;
     }
-out.push({
-id: rec.id,
-due,
-key: dayKeyFromYMD(due.y, due.mo, due.d),
-title: pick(rec, mappings, "Title"),
-category: state.mapped.category ? pick(rec, mappings, "Category") : null,
-assignedTo: state.mapped.assignedTo ? pick(rec, mappings, "AssignedTo") : null,
-priority: state.mapped.priority ? pick(rec, mappings, "Priority") : null,
-status: state.mapped.status ? pick(rec, mappings, "Status") : null,
-description: state.mapped.description ? pick(rec, mappings, "Description") : null,
+    out.push({
+      id: rec.id,
+      due,
+      key: dayKeyFromYMD(due.y, due.mo, due.d),
+      title: pick(rec, mappings, "Title"),
+      category: state.mapped.category ? pick(rec, mappings, "Category") : null,
+      assignedTo: state.mapped.assignedTo ? pick(rec, mappings, "AssignedTo") : null,
+      priority: state.mapped.priority ? pick(rec, mappings, "Priority") : null,
+      status: state.mapped.status ? pick(rec, mappings, "Status") : null,
+      description: state.mapped.description ? pick(rec, mappings, "Description") : null,
       daysLeft: state.mapped.daysLeft ? pick(rec, mappings, "DaysLeft") : null,
-});
-}
-state.records = out;
-  state.unscheduled = unscheduled;
+    });
+  }
+  state.records = out;
   state.unplaced = unplaced;
-// Provisional types from data until metadata resolves them.
-if (state.dueTypeFromMeta === null) state.dueIsDateTime = out.some(r => r.due.timed);
-if (!state.asgTypeKnown) state.asgMulti = out.some(r => Array.isArray(r.assignedTo));
-if (!state.catTypeKnown) state.catMulti = out.some(r => Array.isArray(r.category));
-if (!state.priTypeKnown) state.priIsBool = out.some(r => typeof r.priority === "boolean");
-seedRedCatsIfNeeded();
+  // Provisional types from data until metadata resolves them.
+  if (state.dueTypeFromMeta === null) state.dueIsDateTime = out.some(r => r.due.timed);
+  if (!state.asgTypeKnown) state.asgMulti = out.some(r => Array.isArray(r.assignedTo));
+  if (!state.catTypeKnown) state.catMulti = out.some(r => Array.isArray(r.category));
+  if (!state.priTypeKnown) state.priIsBool = out.some(r => typeof r.priority === "boolean");
+  seedRedCatsIfNeeded();
 }
 
 // On first run, auto-flag SOL / Trial / statute-type categories as critical (red).
 // Only runs until the user's choice is loaded or set; respects any saved selection.
 function seedRedCatsIfNeeded() {
-if (state.redCatsInit || !state.mapped.category) return;
-const cats = distinctValues(recCats).filter(c => c !== NO_CAT);
-if (!cats.length) return; // wait until categories are known
-cats.forEach(c => {
-const s = c.toLowerCase();
-if (s.includes("sol") || s.includes("trial") || s.includes("statute") || s.includes("limitation")) {
-state.redCats.add(c);
-}
-});
-state.redCatsInit = true;
-persist();
+  if (state.redCatsInit || !state.mapped.category) return;
+  const cats = distinctValues(recCats).filter(c => c !== NO_CAT);
+  if (!cats.length) return; // wait until categories are known
+  cats.forEach(c => {
+    const s = c.toLowerCase();
+    if (s.includes("sol") || s.includes("trial") || s.includes("statute") || s.includes("limitation")) {
+      state.redCats.add(c);
+    }
+  });
+  state.redCatsInit = true;
+  persist();
 }
 
 if (state.haveGrist) {
-grist.ready({
-requiredAccess: "full",
-columns: [
-{ name: "DueDate", title: "Due Date", type: "Date,DateTime", description: "Date or DateTime that places the deadline on the calendar." },
-{ name: "Title", title: "Calendar Title", type: "Any", description: "Text shown for each deadline." },
-{ name: "Status", title: "Status", type: "Choice,Text", optional: true, description: "e.g. Complete / Incomplete / Ready. Editable from the calendar; Complete/Done/Closed turn the deadline green." },
-{ name: "Description", title: "Description", type: "Text,Any", optional: true, description: "A longer note. Shown clipped under each deadline in the list views; click the row to expand the full text." },
+  grist.ready({
+    requiredAccess: "full",
+    columns: [
+      { name: "DueDate", title: "Due Date", type: "Date,DateTime", description: "Date or DateTime that places the deadline on the calendar." },
+      { name: "Title", title: "Calendar Title", type: "Any", description: "Text shown for each deadline." },
+      { name: "Status", title: "Status", type: "Choice,Text", optional: true, description: "e.g. Complete / Incomplete / Ready. Editable from the calendar; Complete/Done/Closed turn the deadline green." },
+      { name: "Description", title: "Description", type: "Text,Any", optional: true, description: "A longer note. Shown clipped under each deadline in the list views; click the row to expand the full text." },
       { name: "DaysLeft", title: "Days Left", type: "Int,Numeric,Any", optional: true, description: "A formula column giving days until the deadline (negative once overdue). Shown under the due date in the list views." },
-{ name: "Category", title: "Category", type: "Choice,ChoiceList,Text", optional: true, description: "Used for coloring, the Categories filter, and the critical (red) Flags list." },
-{ name: "AssignedTo", title: "Assigned To", type: "Choice,ChoiceList,Text", optional: true, description: "One or more team members; powers the Assigned filter." },
-{ name: "Priority", title: "Priority", type: "Any", optional: true, description: "Number or choice (e.g. High/Medium/Low). High/important values turn the deadline red; also used for optional priority sorting." },
-],
-});
+      { name: "Category", title: "Category", type: "Choice,ChoiceList,Text", optional: true, description: "Used for coloring, the Categories filter, and the critical (red) Flags list." },
+      { name: "AssignedTo", title: "Assigned To", type: "Choice,ChoiceList,Text", optional: true, description: "One or more team members; powers the Assigned filter." },
+      { name: "Priority", title: "Priority", type: "Any", optional: true, description: "Number or choice (e.g. High/Medium/Low). High/important values turn the deadline red; also used for optional priority sorting." },
+    ],
+  });
 
-grist.onOptions((opts) => {
-opts = opts || {};
-if (opts.view) state.view = opts.view;
-if (typeof opts.sortByPriority === "boolean") state.sortByPriority = opts.sortByPriority;
-if (opts.sortDir) state.sortDir = opts.sortDir;
-if (Array.isArray(opts.hiddenCats)) state.hiddenCats = new Set(opts.hiddenCats);
-if (Array.isArray(opts.hiddenAsgs)) state.hiddenAsgs = new Set(opts.hiddenAsgs);
-if (Array.isArray(opts.hiddenStatuses)) state.hiddenStatuses = new Set(opts.hiddenStatuses);
-if (Array.isArray(opts.redCats)) { state.redCats = new Set(opts.redCats); state.redCatsInit = true; }
-render();
-});
+  grist.onOptions((opts) => {
+    opts = opts || {};
+    if (opts.view) state.view = opts.view;
+    if (typeof opts.sortByPriority === "boolean") state.sortByPriority = opts.sortByPriority;
+    if (opts.sortDir) state.sortDir = opts.sortDir;
+    if (Array.isArray(opts.hiddenCats)) state.hiddenCats = new Set(opts.hiddenCats);
+    if (Array.isArray(opts.hiddenAsgs)) state.hiddenAsgs = new Set(opts.hiddenAsgs);
+    if (Array.isArray(opts.hiddenStatuses)) state.hiddenStatuses = new Set(opts.hiddenStatuses);
+    if (Array.isArray(opts.redCats)) { state.redCats = new Set(opts.redCats); state.redCatsInit = true; }
+    render();
+  });
 
-grist.onRecords((records, mappings) => {
-ingest(records, mappings);
-render();
-if (!state.typesChecked && state.dueColId) {
-state.typesChecked = true;
-detectColumnTypes();
-}
-});
+  grist.onRecords((records, mappings) => {
+    ingest(records, mappings);
+    render();
+    if (!state.typesChecked && state.dueColId) {
+      state.typesChecked = true;
+      detectColumnTypes();
+    }
+  });
 }
 
 render();
