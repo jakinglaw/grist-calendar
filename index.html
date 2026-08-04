@@ -116,12 +116,19 @@
   .radio-row:hover { background: #f3f5f3; }
 
   /* ---- Body ---- */
-  .body { flex: 1 1 auto; min-height: 0; overflow: auto; }
+  .body { flex: 1 1 auto; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
   .meta { padding: 6px 12px; color: var(--ink-faint); font-size: 12px; border-bottom: 1px solid var(--line); }
   .meta b { color: var(--ink-soft); font-weight: 600; }
 
   /* Month grid */
   .month { display: flex; flex-direction: column; min-height: 100%; }
+  /* The month grid keeps its height; a busy day scrolls inside its own panel
+     instead of pushing the whole calendar taller (which would change the grid size). */
+  .daypanel { border-top: 2px solid var(--line-strong); background: var(--panel);
+              display: flex; flex-direction: column; max-height: 42vh; }
+  .daypanel h3 { font-family: var(--display); font-size: 16px; margin: 0; padding: 12px 14px 6px; flex: none; }
+  .daypanel .addday { flex: none; }
+  .daypanel .list { overflow: auto; scrollbar-gutter: stable; }
   .weekhead { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--line); }
   .weekhead div { padding: 7px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); text-align: left; }
   .grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; flex: 1; }
@@ -146,9 +153,6 @@
   .chip.chip-ready { background: var(--green-mid); color: var(--green-ink); }
   .chip.chip-critical { background: var(--red-soft); color: var(--ink); font-weight: 600; }
   .more { font-size: 11px; color: var(--ink-faint); padding-left: 2px; }
-
-  .daypanel { border-top: 2px solid var(--line-strong); background: var(--panel); }
-  .daypanel h3 { font-family: var(--display); font-size: 16px; margin: 0; padding: 12px 14px 6px; }
 
   /* Week */
   .week { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); min-height: 100%; }
@@ -346,7 +350,10 @@
 // Calendar widget version. Bump this on each change and note it here.
 // 2.0 — Case/Matter mapping + new-deadline Case picker; hardened create with
 //       accurate error messages (access vs. data) and reference-safe writes.
-const WIDGET_VERSION = "2.0";
+// 2.1 — Case picker is now a type-to-filter field matching the other dropdowns;
+//       calendar keeps a consistent size when a busy day's scrollbar appears
+//       (stable scrollbar gutter + day panel scrolls internally).
+const WIDGET_VERSION = "2.1";
 
 /* ===================== State ===================== */
 const today = new Date();
@@ -1357,16 +1364,16 @@ function openNewTask(prefillKey) {
   const titleIn = document.createElement("input"); titleIn.type = "text"; titleIn.placeholder = "e.g. File response to MSJ";
   modal.appendChild(titleIn);
 
-  // Case / matter — pick from cases already present in the table
+  // Case / matter — type-to-filter from cases already present in the table.
+  // Uses the same datalistInput as Status/Category/Priority for consistent styling.
   let caseIn = null;
   if (state.mapped.caseRef) {
     modal.appendChild(labelEl("Case"));
     const cases = Object.keys(state.caseRegistry).sort((a, b) => a.localeCompare(b));
     if (cases.length) {
-      caseIn = document.createElement("select");
-      const none = document.createElement("option"); none.value = ""; none.textContent = "\u2014 select a case \u2014"; caseIn.appendChild(none);
-      cases.forEach(label => { const o = document.createElement("option"); o.value = label; o.textContent = label; caseIn.appendChild(o); });
-      modal.appendChild(caseIn);
+      caseIn = datalistInput(cases, "nt-case");
+      caseIn.wrap.querySelector("input").placeholder = "Type to search cases\u2026";
+      modal.appendChild(caseIn.wrap);
     } else {
       const note = el("div", "muted"); note.style.cssText = "font-size:12px;color:var(--ink-soft);margin:2px 0 6px;";
       note.textContent = "No cases found yet \u2014 add one to a deadline in Grist first, then it will appear here.";
@@ -1417,17 +1424,30 @@ function openNewTask(prefillKey) {
     let pendingCaseNote = null;
     fields[state.cols.Title] = title;
     fields[state.cols.DueDate] = encodeDue(dateIn.value, timeIn ? timeIn.value : null);
-    if (caseIn && caseIn.value) {
-      const label = caseIn.value;
-      const refId = state.caseRegistry[label];
-      const isRef = state.caseTypeKnown ? state.caseIsRef : (typeof refId === "number");
-      if (isRef) {
-        // A Reference column requires the target row id. Only write when we have one.
-        if (typeof refId === "number") fields[state.cols.Case] = refId;
-        else pendingCaseNote = label;   // no id resolved — create unlinked, note it below
+    if (caseIn && caseIn.value()) {
+      const typed = caseIn.value();
+      // Resolve the typed text to a known case (exact first, then case-insensitive).
+      let label = null;
+      if (Object.prototype.hasOwnProperty.call(state.caseRegistry, typed)) label = typed;
+      else {
+        const hit = Object.keys(state.caseRegistry).find(k => k.toLowerCase() === typed.toLowerCase());
+        if (hit) label = hit;
+      }
+      if (label) {
+        const refId = state.caseRegistry[label];
+        const isRef = state.caseTypeKnown ? state.caseIsRef : (typeof refId === "number");
+        if (isRef) {
+          // A Reference column requires the target row id. Only write when we have one.
+          if (typeof refId === "number") fields[state.cols.Case] = refId;
+          else pendingCaseNote = label;   // no id resolved — create unlinked, note it below
+        } else {
+          fields[state.cols.Case] = label;   // Choice / Text case name
+        }
       } else {
-        // Choice / Text case name.
-        fields[state.cols.Case] = label;
+        // Typed text doesn't match any known case.
+        const isRef = state.caseTypeKnown ? state.caseIsRef : false;
+        if (isRef) pendingCaseNote = typed;                 // can't create a new reference from here
+        else fields[state.cols.Case] = typed;               // Choice/Text can take a fresh name
       }
     }
     if (statusIn && statusIn.value()) fields[state.cols.Status] = statusIn.value();
