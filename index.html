@@ -50,6 +50,12 @@
     padding: 9px 12px; border-bottom: 1px solid var(--line);
     background: var(--panel);
   }
+  .version {
+    font-size: 11px; color: var(--ink-faint);
+    font-variant-numeric: tabular-nums; letter-spacing: .02em;
+    padding: 2px 7px; border: 1px solid var(--line); border-radius: 20px;
+    background: #fff; white-space: nowrap; align-self: center;
+  }
   .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }
   .seg button {
     border: 0; background: transparent; padding: 6px 12px; font: inherit; cursor: pointer;
@@ -336,6 +342,11 @@
 
 <script>
 "use strict";
+
+// Calendar widget version. Bump this on each change and note it here.
+// 2.0 — Case/Matter mapping + new-deadline Case picker; hardened create with
+//       accurate error messages (access vs. data) and reference-safe writes.
+const WIDGET_VERSION = "2.0";
 
 /* ===================== State ===================== */
 const today = new Date();
@@ -707,6 +718,11 @@ function renderToolbar() {
   if (state.mapped.status) tb.appendChild(filterDropdown("status", "Status", state.hiddenStatuses, recStatus));
   tb.appendChild(sortDropdown());
   if (state.mapped.category) tb.appendChild(flagsDropdown());
+
+  const ver = el("div", "version");
+  ver.textContent = "v" + WIDGET_VERSION;
+  ver.title = "Calendar widget version " + WIDGET_VERSION;
+  tb.appendChild(ver);
 }
 
 function shift(dir) {
