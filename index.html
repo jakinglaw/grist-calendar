@@ -566,7 +566,7 @@ function render() {
       '<div class="notice"><h2>Map your columns</h2><p>In the creator panel on the right, set the widget&rsquo;s column mappings:</p>'
       + '<ol><li><b>Due Date</b> &mdash; a Date or DateTime column (required)</li>'
       + '<li><b>Calendar Title</b> &mdash; the text shown for each deadline (required)</li>'
-      + '<li><b>Status</b>, <b>Description</b>, <b>Days Left</b>, <b>Category</b>, <b>Assigned To</b>, <b>Priority</b> &mdash; optional</li></ol></div>';
+      + '<li><b>Status</b>, <b>Description</b>, <b>Days Left</b>, <b>Category</b>, <b>Case</b>, <b>Assigned To</b>, <b>Priority</b> &mdash; optional</li></ol></div>';
     return;
   }
 
@@ -1341,6 +1341,23 @@ function openNewTask(prefillKey) {
   const titleIn = document.createElement("input"); titleIn.type = "text"; titleIn.placeholder = "e.g. File response to MSJ";
   modal.appendChild(titleIn);
 
+  // Case / matter — pick from cases already present in the table
+  let caseIn = null;
+  if (state.mapped.caseRef) {
+    modal.appendChild(labelEl("Case"));
+    const cases = Object.keys(state.caseRegistry).sort((a, b) => a.localeCompare(b));
+    if (cases.length) {
+      caseIn = document.createElement("select");
+      const none = document.createElement("option"); none.value = ""; none.textContent = "\u2014 select a case \u2014"; caseIn.appendChild(none);
+      cases.forEach(label => { const o = document.createElement("option"); o.value = label; o.textContent = label; caseIn.appendChild(o); });
+      modal.appendChild(caseIn);
+    } else {
+      const note = el("div", "muted"); note.style.cssText = "font-size:12px;color:var(--ink-soft);margin:2px 0 6px;";
+      note.textContent = "No cases found yet \u2014 add one to a deadline in Grist first, then it will appear here.";
+      modal.appendChild(note);
+    }
+  }
+
   const base = prefillKey ? parseKeyToDate(prefillKey) : new Date();
   modal.appendChild(labelEl(state.dueIsDateTime ? "Due date & time" : "Due date"));
   const row2 = el("div", "row2");
@@ -1381,8 +1398,22 @@ function openNewTask(prefillKey) {
     if (!title) { titleIn.style.borderColor = "var(--red)"; titleIn.focus(); return; }
     if (!dateIn.value) { dateIn.style.borderColor = "var(--red)"; return; }
     const fields = {};
+    let pendingCaseNote = null;
     fields[state.cols.Title] = title;
     fields[state.cols.DueDate] = encodeDue(dateIn.value, timeIn ? timeIn.value : null);
+    if (caseIn && caseIn.value) {
+      const label = caseIn.value;
+      const refId = state.caseRegistry[label];
+      const isRef = state.caseTypeKnown ? state.caseIsRef : (typeof refId === "number");
+      if (isRef) {
+        // A Reference column requires the target row id. Only write when we have one.
+        if (typeof refId === "number") fields[state.cols.Case] = refId;
+        else pendingCaseNote = label;   // no id resolved — create unlinked, note it below
+      } else {
+        // Choice / Text case name.
+        fields[state.cols.Case] = label;
+      }
+    }
     if (statusIn && statusIn.value()) fields[state.cols.Status] = statusIn.value();
     if (catIn && catIn.value()) fields[state.cols.Category] = state.catMulti ? ["L", catIn.value()] : catIn.value();
     if (priBoolIn) { if (priBoolIn.checked) fields[state.cols.Priority] = true; }
@@ -1392,7 +1423,12 @@ function openNewTask(prefillKey) {
     }
     if (asgPicker) { const a = encodeAssignees(asgPicker.get()); if (a !== null) fields[state.cols.AssignedTo] = a; }
     if (descIn && descIn.value.trim()) fields[state.cols.Description] = descIn.value;
-    createTask(fields);
+    createTask(fields).then(ok => {
+      if (ok && pendingCaseNote) {
+        alert("Deadline created. The case \u201c" + pendingCaseNote + "\u201d couldn't be linked " +
+              "because its row id wasn't available \u2014 open the deadline in Grist to set the Case.");
+      }
+    });
     closeModal();
   };
   const cancelB = el("button", "m-cancel"); cancelB.textContent = "Cancel";
@@ -1456,16 +1492,47 @@ function setPriority(rowId, arr) {
   if (v !== null && v !== "" && !isNaN(Number(v))) v = Number(v);
   writeField(rowId, state.cols.Priority, v, "priority");
 }
-async function createTask(fields) {
+async function createTask(fields, opts) {
+  opts = opts || {};
+  // Guard: never send null/undefined column IDs (a create with a bad key throws).
+  const clean = {};
+  Object.keys(fields).forEach(k => { if (k && k !== "null" && k !== "undefined" && fields[k] !== undefined) clean[k] = fields[k]; });
   try {
-    await grist.selectedTable.create({ fields: fields });
+    await grist.selectedTable.create({ fields: clean });
+    return true;
   } catch (e) {
+    // Retry via user actions (more permissive for some column types).
     try {
       const tid = await grist.selectedTable.getTableId();
-      await grist.docApi.applyUserActions([["AddRecord", tid, null, fields]]);
+      await grist.docApi.applyUserActions([["AddRecord", tid, null, clean]]);
+      return true;
     } catch (e2) {
+      const msg = String((e2 && e2.message) || e2 || "");
+      // A Reference column rejects a name string — retry once without the Case field,
+      // so the deadline is still created (just unlinked) rather than lost entirely.
+      const caseCol = state.cols.Case;
+      if (!opts.noCase && caseCol && clean[caseCol] !== undefined &&
+          /ref|reference|type|invalid|convert/i.test(msg)) {
+        const without = Object.assign({}, clean); delete without[caseCol];
+        const ok = await createTask(without, { noCase: true });
+        if (ok) {
+          alert("Deadline created, but the case couldn't be linked automatically. " +
+                "Open it in Grist and set the Case, or map the Case column to a plain text field. " +
+                "(Details: " + msg + ")");
+          return true;
+        }
+      }
       console.error("create failed", e2);
-      alert("Could not create the deadline. The widget needs full (read \u0026 write) access \u2014 check the widget's access setting in the creator panel.");
+      // Distinguish an access problem from a data problem in the message.
+      if (/access|permission|read-only|denied/i.test(msg)) {
+        alert("Could not create the deadline: the widget needs full (read \u0026 write) access. " +
+              "Open the creator panel and set access to Full.");
+      } else {
+        alert("Could not create the deadline. " + (msg ? "Grist reported: " + msg : "Unknown error.") +
+              "\n\nIf this mentions the Case column, try mapping it to a plain Choice/Text field, " +
+              "or leave Case unset when creating from the calendar.");
+      }
+      return false;
     }
   }
 }
@@ -1490,6 +1557,8 @@ async function detectColumnTypes() {
     if (dt !== null) { state.dueTypeFromMeta = dt.indexOf("DateTime") === 0; state.dueIsDateTime = state.dueTypeFromMeta; }
     const at = typeOf(state.cols.AssignedTo);
     if (at !== null) { state.asgMulti = isList(at); state.asgTypeKnown = true; }
+    const cst = typeOf(state.cols.Case);
+    if (cst !== null) { state.caseIsRef = (cst.indexOf("Ref") === 0); state.caseTypeKnown = true; }
     const ct = typeOf(state.cols.Category);
     if (ct !== null) { state.catMulti = isList(ct); state.catTypeKnown = true; }
     const pt = typeOf(state.cols.Priority);
@@ -1522,8 +1591,25 @@ function pick(rec, mappings, logical) {
   return rec[real];
 }
 
+// Normalize a Case reference cell into { id, label }.
+// Grist references may arrive as a bare rowId (number), a ["R", table, rowId]
+// marker, or — when the widget maps the visible column — the display string.
+function readCase(rec, mappings) {
+  const raw = pick(rec, mappings, "Case");
+  if (raw === null || raw === undefined || raw === "") return null;
+  if (typeof raw === "number") return { id: raw, label: String(raw) };
+  if (Array.isArray(raw)) {
+    // ["R", tableId, rowId] or a RefList; take the first meaningful entry
+    if (raw[0] === "R" && raw.length >= 3) return { id: raw[2], label: String(raw[2]) };
+    const items = raw[0] === "L" ? raw.slice(1) : raw;
+    if (items.length) return { id: items[0], label: String(items[0]) };
+    return null;
+  }
+  // A display string (Grist resolved the reference to its show-column value)
+  return { id: null, label: String(raw) };
+}
+
 function ingest(records, mappings) {
-  mappings = mappings || {};
   state.mapped = {
     due: !!mappings.DueDate,
     title: !!mappings.Title,
@@ -1533,6 +1619,7 @@ function ingest(records, mappings) {
     status: !!mappings.Status,
     description: !!mappings.Description,
     daysLeft: !!mappings.DaysLeft,
+    caseRef: !!mappings.Case,
   };
   state.cols = {
     DueDate: mappings.DueDate || null,
@@ -1542,16 +1629,21 @@ function ingest(records, mappings) {
     AssignedTo: mappings.AssignedTo || null,
     Priority: mappings.Priority || null,
     Description: mappings.Description || null,
+    Case: mappings.Case || null,
   };
   state.statusColId = mappings.Status || null;
   state.dueColId = mappings.DueDate || null;
   state.descColId = mappings.Description || null;
   state.asgColId = mappings.AssignedTo || null;
+  state.caseColId = mappings.Case || null;
+  state.caseRegistry = {};   // display label -> reference row id (from cases already in the table)
   const out = [];
   const unplaced = [];
   for (const rec of (records || [])) {
     const rawDue = pick(rec, mappings, "DueDate");
     const due = parseDue(rawDue);
+    const caseInfo = state.mapped.caseRef ? readCase(rec, mappings) : null;
+    if (caseInfo && caseInfo.label) state.caseRegistry[caseInfo.label] = caseInfo.id;
     if (!due) {
       unplaced.push({
         id: rec.id,
@@ -1559,6 +1651,7 @@ function ingest(records, mappings) {
         status: state.mapped.status ? pick(rec, mappings, "Status") : null,
         category: state.mapped.category ? pick(rec, mappings, "Category") : null,
         assignedTo: state.mapped.assignedTo ? pick(rec, mappings, "AssignedTo") : null,
+        caseLabel: caseInfo ? caseInfo.label : null,
         reason: (rawDue === null || rawDue === undefined || rawDue === "") ? "no-date" : "bad-date",
       });
       continue;
@@ -1574,6 +1667,8 @@ function ingest(records, mappings) {
       status: state.mapped.status ? pick(rec, mappings, "Status") : null,
       description: state.mapped.description ? pick(rec, mappings, "Description") : null,
       daysLeft: state.mapped.daysLeft ? pick(rec, mappings, "DaysLeft") : null,
+      caseLabel: caseInfo ? caseInfo.label : null,
+      caseId: caseInfo ? caseInfo.id : null,
     });
   }
   state.records = out;
@@ -1612,6 +1707,7 @@ if (state.haveGrist) {
       { name: "Description", title: "Description", type: "Text,Any", optional: true, description: "A longer note. Shown clipped under each deadline in the list views; click the row to expand the full text." },
       { name: "DaysLeft", title: "Days Left", type: "Int,Numeric,Any", optional: true, description: "A formula column giving days until the deadline (negative once overdue). Shown under the due date in the list views." },
       { name: "Category", title: "Category", type: "Choice,ChoiceList,Text", optional: true, description: "Used for coloring, the Categories filter, and the critical (red) Flags list." },
+      { name: "Case", title: "Case / Matter", type: "Ref,Choice,Text", optional: true, description: "The case each deadline belongs to (a Reference to your master case list, or a Choice/Text case name). Lets new deadlines created here be filed under the right case." },
       { name: "AssignedTo", title: "Assigned To", type: "Choice,ChoiceList,Text", optional: true, description: "One or more team members; powers the Assigned filter." },
       { name: "Priority", title: "Priority", type: "Any", optional: true, description: "Number or choice (e.g. High/Medium/Low). High/important values turn the deadline red; also used for optional priority sorting." },
     ],
