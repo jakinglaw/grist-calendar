@@ -363,7 +363,12 @@
 // 2.5 — Removed the Title field from "New deadline": Title is a formula column
 //       (built from Case + Category), so this widget no longer requires it or
 //       writes to it, which would have overridden the formula.
-const WIDGET_VERSION = "2.5";
+// 2.6 — Fixed "couldn't be linked" on create: Grist was handing back the Case
+//       reference already resolved to display text (no row id attached), so a
+//       case already in use could fail to link. Now reads the RAW reference
+//       values via fetchTable and matches them back by row id, so an existing
+//       case links directly instead of falling back to an unlinked deadline.
+const WIDGET_VERSION = "2.6";
 
 /* ===================== State ===================== */
 const today = new Date();
@@ -385,6 +390,11 @@ const state = {
   catTypeKnown: false,
   priIsBool: false,     // Priority is a boolean/toggle column
   priTypeKnown: false,
+  caseIsRef: false,      // Case is a true Reference column (vs Choice/Text)
+  caseTypeKnown: false,
+  caseTargetTable: null, // the reference's target table id, parsed from its type
+  caseRegistry: {},      // case label -> row id (or null), from cases already in use
+  caseRawById: {},       // deadline row id -> raw Case cell value (unresolved)
   typesChecked: false,
   view: "month",        // 'day' | 'week' | 'month'
   focus: stripTime(today),
@@ -1602,13 +1612,58 @@ async function detectColumnTypes() {
     const at = typeOf(state.cols.AssignedTo);
     if (at !== null) { state.asgMulti = isList(at); state.asgTypeKnown = true; }
     const cst = typeOf(state.cols.Case);
-    if (cst !== null) { state.caseIsRef = (cst.indexOf("Ref") === 0); state.caseTypeKnown = true; }
+    if (cst !== null) {
+      state.caseIsRef = (cst.indexOf("Ref") === 0);
+      state.caseTypeKnown = true;
+      const m = cst.match(/^Ref(?:List)?:(.+)$/);
+      state.caseTargetTable = m ? m[1] : null;
+    }
     const ct = typeOf(state.cols.Category);
     if (ct !== null) { state.catMulti = isList(ct); state.catTypeKnown = true; }
     const pt = typeOf(state.cols.Priority);
     if (pt !== null) { state.priIsBool = pt === "Bool"; state.priTypeKnown = true; }
+    await refreshCaseIds();
     render();
   } catch (e) { /* keep data-based heuristics */ }
+}
+
+// Extract a plain row id from a raw reference cell value (fetchTable gives
+// unresolved data, so this is normally just a number, but be defensive).
+function extractRefId(v) {
+  if (typeof v === "number") return v > 0 ? v : null;
+  if (Array.isArray(v)) {
+    if (v[0] === "R" && v.length >= 3 && typeof v[2] === "number") return v[2];
+    const items = v[0] === "L" ? v.slice(1) : v;
+    if (items.length && typeof items[0] === "number") return items[0];
+  }
+  return null;
+}
+
+// Resolve real row ids for cases already used in the deadlines table.
+// onRecords can hand back a Reference column already resolved to its display
+// text (no id attached), which is why a case picked from the "existing cases"
+// list could fail to link. This reads the RAW column values straight from the
+// table via fetchTable \u2014 which are always plain row ids for a Reference \u2014
+// and matches them back to each deadline by row id, so the case registry ends
+// up with a real, writable reference id instead of just a label.
+async function refreshCaseIds() {
+  if (!state.mapped.caseRef || !state.caseTypeKnown || !state.caseIsRef) return;
+  const colId = state.cols.Case;
+  if (!colId) return;
+  try {
+    const tableId = await grist.selectedTable.getTableId();
+    const raw = await grist.docApi.fetchTable(tableId);
+    if (!raw || !raw.id || !(colId in raw)) return;
+    const rawVals = raw[colId];
+    const byRowId = {};
+    for (let i = 0; i < raw.id.length; i++) byRowId[raw.id[i]] = extractRefId(rawVals[i]);
+    state.caseRawById = byRowId;
+    // Patch the registry with real ids wherever a placed/unplaced record resolves one.
+    state.records.concat(state.unplaced).forEach(r => {
+      const rid = byRowId[r.id];
+      if (r.caseLabel && typeof rid === "number") state.caseRegistry[r.caseLabel] = rid;
+    });
+  } catch (e) { /* fall back to whatever readCase() already resolved */ }
 }
 
 function persist() {
@@ -1775,6 +1830,9 @@ if (state.haveGrist) {
     if (!state.typesChecked && state.dueColId) {
       state.typesChecked = true;
       detectColumnTypes();
+    } else if (state.caseTypeKnown && state.caseIsRef) {
+      // Keep the id map current as new cases get used, without a full type re-check.
+      refreshCaseIds().then(render);
     }
   });
 }
