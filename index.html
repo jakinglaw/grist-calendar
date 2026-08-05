@@ -353,7 +353,10 @@
 // 2.1 — Case picker is now a type-to-filter field matching the other dropdowns;
 //       calendar keeps a consistent size when a busy day's scrollbar appears
 //       (stable scrollbar gutter + day panel scrolls internally).
-const WIDGET_VERSION = "2.1";
+// 2.2 — Case field now matches Status/Category exactly (removed a stray
+//       placeholder that made it look different from the other fields).
+// 2.3 — Version label moved to the header bar, right next to the + New button.
+const WIDGET_VERSION = "2.3";
 
 /* ===================== State ===================== */
 const today = new Date();
@@ -718,6 +721,11 @@ function renderToolbar() {
   nb.onclick = (e) => { e.stopPropagation(); openNewTask(state.selectedKey); };
   tb.appendChild(nb);
 
+  const ver = el("div", "version");
+  ver.textContent = "v" + WIDGET_VERSION;
+  ver.title = "Calendar widget version " + WIDGET_VERSION;
+  tb.appendChild(ver);
+
   tb.appendChild(el("div", "spacer"));
 
   if (state.mapped.category) tb.appendChild(filterDropdown("cat", "Categories", state.hiddenCats, recCats));
@@ -725,11 +733,6 @@ function renderToolbar() {
   if (state.mapped.status) tb.appendChild(filterDropdown("status", "Status", state.hiddenStatuses, recStatus));
   tb.appendChild(sortDropdown());
   if (state.mapped.category) tb.appendChild(flagsDropdown());
-
-  const ver = el("div", "version");
-  ver.textContent = "v" + WIDGET_VERSION;
-  ver.title = "Calendar widget version " + WIDGET_VERSION;
-  tb.appendChild(ver);
 }
 
 function shift(dir) {
@@ -1372,7 +1375,6 @@ function openNewTask(prefillKey) {
     const cases = Object.keys(state.caseRegistry).sort((a, b) => a.localeCompare(b));
     if (cases.length) {
       caseIn = datalistInput(cases, "nt-case");
-      caseIn.wrap.querySelector("input").placeholder = "Type to search cases\u2026";
       modal.appendChild(caseIn.wrap);
     } else {
       const note = el("div", "muted"); note.style.cssText = "font-size:12px;color:var(--ink-soft);margin:2px 0 6px;";
