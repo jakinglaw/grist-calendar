@@ -122,13 +122,14 @@
 
   /* Month grid */
   .month { display: flex; flex-direction: column; min-height: 100%; }
-  /* The month grid keeps its height; a busy day scrolls inside its own panel
-     instead of pushing the whole calendar taller (which would change the grid size). */
+  /* The day panel is a FIXED height, not a max-height — so the month grid above it
+     (and every cell in it) never resizes when you select a day with more or fewer
+     deadlines. A short list just leaves blank space; a long one scrolls internally. */
   .daypanel { border-top: 2px solid var(--line-strong); background: var(--panel);
-              display: flex; flex-direction: column; max-height: 42vh; }
+              display: flex; flex-direction: column; height: 42vh; flex: none; }
   .daypanel h3 { font-family: var(--display); font-size: 16px; margin: 0; padding: 12px 14px 6px; flex: none; }
   .daypanel .addday { flex: none; }
-  .daypanel .list { overflow: auto; scrollbar-gutter: stable; }
+  .daypanel .list { flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
   .weekhead { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--line); }
   .weekhead div { padding: 7px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); text-align: left; }
   .grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; flex: 1; }
@@ -356,7 +357,13 @@
 // 2.2 — Case field now matches Status/Category exactly (removed a stray
 //       placeholder that made it look different from the other fields).
 // 2.3 — Version label moved to the header bar, right next to the + New button.
-const WIDGET_VERSION = "2.3";
+// 2.4 — Month view's day panel is now a fixed height (was max-height), so the
+//       calendar grid no longer resizes when switching between a busy day and
+//       an empty one; the day panel's list scrolls internally instead.
+// 2.5 — Removed the Title field from "New deadline": Title is a formula column
+//       (built from Case + Category), so this widget no longer requires it or
+//       writes to it, which would have overridden the formula.
+const WIDGET_VERSION = "2.5";
 
 /* ===================== State ===================== */
 const today = new Date();
@@ -1362,10 +1369,10 @@ function openNewTask(prefillKey) {
   const modal = el("div", "modal");
   modal.addEventListener("click", e => e.stopPropagation());
   modal.appendChild(Object.assign(el("h3"), { textContent: "New deadline" }));
-
-  modal.appendChild(labelEl("Title"));
-  const titleIn = document.createElement("input"); titleIn.type = "text"; titleIn.placeholder = "e.g. File response to MSJ";
-  modal.appendChild(titleIn);
+  const titleNote = el("div", "muted");
+  titleNote.style.cssText = "font-size:12px;color:var(--ink-soft);margin:-4px 0 10px;";
+  titleNote.textContent = "The title is generated automatically from the Case and Category once set.";
+  modal.appendChild(titleNote);
 
   // Case / matter — type-to-filter from cases already present in the table.
   // Uses the same datalistInput as Status/Category/Priority for consistent styling.
@@ -1419,12 +1426,10 @@ function openNewTask(prefillKey) {
   const acts = el("div", "modal-actions");
   const createB = el("button", "m-create"); createB.textContent = "Create";
   createB.onclick = () => {
-    const title = titleIn.value.trim();
-    if (!title) { titleIn.style.borderColor = "var(--red)"; titleIn.focus(); return; }
+    // Title is a formula column (derived from Case + Category) — never written here.
     if (!dateIn.value) { dateIn.style.borderColor = "var(--red)"; return; }
     const fields = {};
     let pendingCaseNote = null;
-    fields[state.cols.Title] = title;
     fields[state.cols.DueDate] = encodeDue(dateIn.value, timeIn ? timeIn.value : null);
     if (caseIn && caseIn.value()) {
       const typed = caseIn.value();
@@ -1476,7 +1481,8 @@ function openNewTask(prefillKey) {
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
-  titleIn.focus();
+  if (caseIn) caseIn.wrap.querySelector("input").focus();
+  else dateIn.focus();
 }
 
 document.addEventListener("click", () => {
@@ -1740,7 +1746,7 @@ if (state.haveGrist) {
     requiredAccess: "full",
     columns: [
       { name: "DueDate", title: "Due Date", type: "Date,DateTime", description: "Date or DateTime that places the deadline on the calendar." },
-      { name: "Title", title: "Calendar Title", type: "Any", description: "Text shown for each deadline." },
+      { name: "Title", title: "Calendar Title", type: "Any", description: "Text shown for each deadline. If this is a formula column (e.g. built from Case + Category), this widget only reads it \u2014 it never writes to Title, so the formula is never overridden." },
       { name: "Status", title: "Status", type: "Choice,Text", optional: true, description: "e.g. Complete / Incomplete / Ready. Editable from the calendar; Complete/Done/Closed turn the deadline green." },
       { name: "Description", title: "Description", type: "Text,Any", optional: true, description: "A longer note. Shown clipped under each deadline in the list views; click the row to expand the full text." },
       { name: "DaysLeft", title: "Days Left", type: "Int,Numeric,Any", optional: true, description: "A formula column giving days until the deadline (negative once overdue). Shown under the due date in the list views." },
