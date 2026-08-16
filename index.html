@@ -27,6 +27,8 @@
     --green-line: #bfe6cd;
     --red: #c23b22;
     --red-soft: #fbecea;
+    --case-hl: #6a4fa0;
+    --case-hl-soft: #efe9f7;
     --radius: 8px;
     --shadow: 0 1px 2px rgba(20,40,38,.06), 0 6px 20px rgba(20,40,38,.07);
     --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -55,6 +57,11 @@
     font-variant-numeric: tabular-nums; letter-spacing: .02em;
     padding: 2px 7px; border: 1px solid var(--line); border-radius: 20px;
     background: #fff; white-space: nowrap; align-self: center;
+  }
+  .demo-badge {
+    font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #8a5a12;
+    padding: 2px 8px; border: 1px solid #e6d0a0; border-radius: 20px;
+    background: #fdf3e0; white-space: nowrap; align-self: center;
   }
   .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }
   .seg button {
@@ -109,6 +116,12 @@
   .poprow .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .poprow .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
   .poplist { max-height: min(640px, 72vh); overflow: auto; }
+  .settings-pop { min-width: 260px; max-width: 320px; }
+  .settings-row { align-items: flex-start; }
+  .settings-row input { margin-top: 2px; flex: none; }
+  .settings-text { flex: 1; min-width: 0; }
+  .settings-label { font-size: 13px; color: var(--ink); }
+  .settings-hint { font-size: 11px; color: var(--ink-faint); margin-top: 2px; line-height: 1.35; }
   .popactions { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); margin-top: 4px; }
   .popactions button { flex: 1; border: 1px solid var(--line-strong); background: #fff; border-radius: 6px; padding: 5px; cursor: pointer; font: inherit; color: var(--ink-soft); }
   .popactions button:hover { background: #eef1ef; }
@@ -130,6 +143,7 @@
   .daypanel h3 { font-family: var(--display); font-size: 16px; margin: 0; padding: 12px 14px 6px; flex: none; }
   .daypanel .addday { flex: none; }
   .daypanel .list { flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+  .daypanel.dragover { box-shadow: inset 0 0 0 2px var(--accent); }
   .weekhead { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--line); }
   .weekhead div { padding: 7px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); text-align: left; }
   .grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; flex: 1; }
@@ -143,21 +157,26 @@
   .cell.today { background: var(--today); box-shadow: inset 0 0 0 1px var(--today-line); }
   .cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--accent); }
   .cell:hover { background: #f1f5f3; }
+  .cell.dragover { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
   .daynum { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
   .chip {
     font-size: 11px; padding: 1px 6px; border-radius: 5px; background: var(--accent-soft);
     color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    border-left: 3px solid var(--accent);
+    border-left: 3px solid var(--accent); cursor: grab;
   }
+  .chip:active { cursor: grabbing; }
+  .chip.dragging { opacity: .35; }
   .chip .t { color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-right: 4px; }
   .chip.chip-complete { background: var(--green-mid); color: var(--green-ink); }
   .chip.chip-ready { background: var(--green-mid); color: var(--green-ink); }
   .chip.chip-critical { background: var(--red-soft); color: var(--ink); font-weight: 600; }
+  .chip.case-highlight { outline: 2px solid var(--case-hl); outline-offset: 1px; }
   .more { font-size: 11px; color: var(--ink-faint); padding-left: 2px; }
 
   /* Week */
   .week { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); min-height: 100%; }
   .weekcol { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .weekcol.dragover { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
   .weekcol:last-child { border-right: 0; }
   .weekcol .colhead {
     padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: pointer; position: sticky; top: 0; background: var(--panel); z-index: 1;
@@ -177,6 +196,8 @@
     border-left-width: 4px;
   }
   .row:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
+  .row.dragging { opacity: .35; }
+  .row.case-highlight { outline: 2px solid var(--case-hl); outline-offset: 2px; background: var(--case-hl-soft); }
   .row .duewrap { position: relative; flex: none; }
   .row .time {
     font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 12px; min-width: 64px; padding: 1px 3px 0 0;
@@ -325,6 +346,15 @@
   .btn-small:hover { filter: brightness(1.05); }
   .btn-small.ghost { background: #fff; color: var(--ink-soft); border-color: var(--line-strong); }
   .btn-small.ghost:hover { background: #eef1ef; }
+  .btn-small.ghost.danger { color: var(--red); border-color: #e6b3a8; }
+  .btn-small.ghost.danger:hover { background: var(--red-soft); border-color: var(--red); }
+
+  .delbtn {
+    flex: none; border: 0; background: transparent; color: var(--ink-faint);
+    font-size: 13px; padding: 4px 6px; cursor: pointer; border-radius: 6px;
+    opacity: .45; line-height: 1; align-self: flex-start;
+  }
+  .delbtn:hover { background: var(--red-soft); color: var(--red); opacity: 1; }
 
   /* Messages */
   .notice { padding: 28px; max-width: 460px; margin: 24px auto; text-align: center; color: var(--ink-soft); }
@@ -368,13 +398,44 @@
 //       case already in use could fail to link. Now reads the RAW reference
 //       values via fetchTable and matches them back by row id, so an existing
 //       case links directly instead of falling back to an unlinked deadline.
-const WIDGET_VERSION = "2.6";
+// 2.7 — Added the ability to fully delete a deadline from the widget: a trash
+//       icon on every task row (month/week/day views) and a Delete option in
+//       the "needs attention" panel for undated/unplaced tasks. Confirms first,
+//       removes the record from the table, and distinguishes an access problem
+//       from a data problem if the delete fails.
+// 2.8 — Drag and drop to reschedule: drag a chip (month grid) or a task row
+//       (day panel / week columns) onto a different day cell, week column, or
+//       the day panel to change its due date. Preserves time-of-day for
+//       DateTime columns; dropping on the task's current day is a no-op.
+//       Native HTML5 drag-and-drop, so touchscreens aren't supported yet.
+// 2.9 — Added demo data: opening this page outside Grist now shows a sample
+//       docket (16 dated + 2 undated deadlines across 5 fictional matters) so
+//       every feature — filters, the Case picker, drag-and-drop, delete,
+//       critical flags — can be tried before connecting a real document.
+//       A "DEMO DATA" badge appears in the toolbar; edits are in-memory only.
+// 3.0 — Added a Settings button (gear icon, toolbar) for options that don't
+//       need to be visible all the time. First setting: "Show deadlines from
+//       other months" — toggles whether Month view's greyed-out lead/trail
+//       days (e.g. late July shown while viewing August) display their
+//       deadlines. Defaults on (matches prior behavior); persists per-doc.
+// 3.1 — Click a deadline chip or row (or start dragging one) to highlight every
+//       other deadline for the same case, in every visible view — so you can
+//       see at a glance whether a reschedule would push it past a related
+//       deadline. Click again / click empty space to clear. Drag highlighting
+//       is applied directly to the page (not via a full re-render), so it
+//       can't interrupt an in-progress drag.
+// 3.2 — The related-deadline highlight from 3.1 is now a Settings toggle
+//       ("Highlight related deadlines"), on by default. Turning it off also
+//       clears any highlight currently showing. Only appears in Settings when
+//       a Case column is mapped.
+const WIDGET_VERSION = "3.2";
 
 /* ===================== State ===================== */
 const today = new Date();
 const state = {
   ready: false,
   haveGrist: typeof grist !== "undefined" && grist && grist.ready,
+  demoMode: false,       // true when previewing with sample data outside Grist
   records: [],          // parsed + scheduled deadlines
   mapped: { due: false, title: false, category: false, assignedTo: false, priority: false, status: false, description: false },
   cols: {},             // logical name -> real column id (for write/create)
@@ -406,7 +467,10 @@ const state = {
   hiddenStatuses: new Set(),
   redCats: new Set(),   // categories flagged critical (red)
   redCatsInit: false,   // whether redCats has been seeded/loaded
-  openPopover: null,    // 'cat' | 'asg' | 'status' | 'sort' | 'flags' | null
+  openPopover: null,    // 'cat' | 'asg' | 'status' | 'sort' | 'flags' | 'settings' | null
+  showOutsideDeadlines: true,   // show/hide deadlines in the greyed-out lead/trail days of month view
+  highlightCase: null,          // case label whose other deadlines are currently highlighted
+  caseHighlightEnabled: true,   // whether clicking/dragging a deadline highlights its case-mates
   openStatusRow: null,  // rowId whose status menu is open
   openDateRow: null,    // rowId whose due-date editor is open
   editingDescRow: null, // rowId whose description editor is open
@@ -588,7 +652,7 @@ function recordsForKey(key) {
 
 /* ===================== Rendering ===================== */
 function render() {
-  if (!state.haveGrist) {
+  if (!state.haveGrist && !state.demoMode) {
     document.getElementById("toolbar").style.display = "none";
     document.getElementById("meta").style.display = "none";
     document.getElementById("body").innerHTML =
@@ -675,7 +739,9 @@ function unplacedItem(u) {
   setB.onclick = () => { if (!dIn.value) return; setDue(u.id, encodeDue(dIn.value, null)); };
   const openB = el("button", "btn-small ghost"); openB.textContent = "Open in table";
   openB.onclick = () => { selectInGrist(u.id); };
-  fix.append(dIn, setB, openB);
+  const delB = el("button", "btn-small ghost danger"); delB.textContent = "Delete";
+  delB.onclick = () => { deleteTask(u.id, u.title); };
+  fix.append(dIn, setB, openB, delB);
   item.appendChild(fix);
   return item;
 }
@@ -743,6 +809,13 @@ function renderToolbar() {
   ver.title = "Calendar widget version " + WIDGET_VERSION;
   tb.appendChild(ver);
 
+  if (state.demoMode) {
+    const badge = el("div", "demo-badge");
+    badge.textContent = "DEMO DATA";
+    badge.title = "Sample deadlines for previewing the widget \u2014 open this page as a Grist custom widget to connect real data.";
+    tb.appendChild(badge);
+  }
+
   tb.appendChild(el("div", "spacer"));
 
   if (state.mapped.category) tb.appendChild(filterDropdown("cat", "Categories", state.hiddenCats, recCats));
@@ -750,6 +823,7 @@ function renderToolbar() {
   if (state.mapped.status) tb.appendChild(filterDropdown("status", "Status", state.hiddenStatuses, recStatus));
   tb.appendChild(sortDropdown());
   if (state.mapped.category) tb.appendChild(flagsDropdown());
+  tb.appendChild(settingsDropdown());
 }
 
 function shift(dir) {
@@ -883,7 +957,69 @@ function flagsDropdown() {
   return wrap;
 }
 
+function settingsToggleRow(label, hint, checked, onChange) {
+  const row = el("label", "poprow settings-row");
+  const cb = document.createElement("input"); cb.type = "checkbox";
+  cb.checked = checked;
+  cb.onchange = () => onChange(cb.checked);
+  const text = el("div", "settings-text");
+  text.appendChild(Object.assign(el("div", "settings-label"), { textContent: label }));
+  text.appendChild(Object.assign(el("div", "settings-hint"), { textContent: hint }));
+  row.append(cb, text);
+  return row;
+}
+
+function settingsDropdown() {
+  const wrap = el("div", "dropwrap");
+  const btn = el("button", "iconbtn");
+  btn.innerHTML = "\u2699\uFE0F";
+  btn.title = "Widget settings";
+  btn.onclick = (e) => { e.stopPropagation(); state.openPopover = state.openPopover === "settings" ? null : "settings"; render(); };
+  wrap.appendChild(btn);
+
+  if (state.openPopover === "settings") {
+    const pop = el("div", "popover settings-pop");
+    pop.onclick = (e) => e.stopPropagation();
+    pop.appendChild(popHeader("Settings"));
+    const list = el("div", "poplist");
+
+    list.appendChild(settingsToggleRow(
+      "Show deadlines from other months",
+      "In Month view, include deadlines that fall on the greyed-out leading/trailing days from the previous or next month.",
+      state.showOutsideDeadlines,
+      (checked) => { state.showOutsideDeadlines = checked; persist(); render(); }
+    ));
+
+    if (state.mapped.caseRef) {
+      list.appendChild(settingsToggleRow(
+        "Highlight related deadlines",
+        "When you click or start dragging a deadline, highlight every other deadline for the same case \u2014 so you can spot one you'd be moving past.",
+        state.caseHighlightEnabled,
+        (checked) => {
+          state.caseHighlightEnabled = checked;
+          if (!checked) state.highlightCase = null;   // turning it off also clears any active highlight
+          persist(); render();
+        }
+      ));
+    }
+
+    pop.appendChild(list);
+    wrap.appendChild(pop);
+  }
+  return wrap;
+}
+
 /* ---- Deadline row ---- */
+function delBtn(r) {
+  const b = el("button", "delbtn");
+  b.innerHTML = "\u{1F5D1}";
+  b.title = "Delete this deadline";
+  b.onclick = (e) => { e.stopPropagation(); deleteTask(r.id, r.title); };
+  return b;
+}
+
+function caseHighlightOn() { return state.caseHighlightEnabled && state.mapped.caseRef; }
+
 function rowEl(r, compact) {
   const kind = classify(r);
   const expanded = state.expandedRows.has(r.id);
@@ -891,8 +1027,11 @@ function rowEl(r, compact) {
   const editingDesc = state.editingDescRow === r.id;
   const editingCat = state.editingCatRow === r.id;
   const editingPri = state.editingPriRow === r.id;
-  const row = el("div", "row " + kind + (compact ? " compactrow" : "") + (expanded ? " expanded" : ""));
+  const related = caseHighlightOn() && r.caseLabel && r.caseLabel === state.highlightCase;
+  const row = el("div", "row " + kind + (compact ? " compactrow" : "") + (expanded ? " expanded" : "") + (related ? " case-highlight" : ""));
   row.style.borderLeftColor = stripeColor(r, kind);
+  if (caseHighlightOn() && r.caseLabel) row.dataset.case = r.caseLabel;
+  makeDraggable(row, r);
 
   row.appendChild(dueCell(r, compact));
 
@@ -959,12 +1098,17 @@ function rowEl(r, compact) {
   row.appendChild(main);
 
   if (state.mapped.status) row.appendChild(statusControl(r, kind));
+  row.appendChild(delBtn(r));
 
-  row.onclick = () => {
+  row.onclick = (e) => {
+    e.stopPropagation();
     if (hasDesc && !editingDesc) {
       if (expanded) state.expandedRows.delete(r.id); else state.expandedRows.add(r.id);
-      render();
     }
+    if (caseHighlightOn() && r.caseLabel) {
+      state.highlightCase = (state.highlightCase === r.caseLabel) ? null : r.caseLabel;
+    }
+    render();
     selectInGrist(r.id);
   };
   return row;
@@ -1289,20 +1433,32 @@ function renderMonth() {
       + (key === todayKey ? " today" : "") + (key === state.selectedKey ? " selected" : ""));
     cell.appendChild(Object.assign(el("div", "daynum"), { textContent: d.getDate() }));
 
-    const recs = recordsForKey(key);
+    const recs = (outside && !state.showOutsideDeadlines) ? [] : recordsForKey(key);
     const shown = recs.slice(0, 3);
     shown.forEach(r => {
       const kind = classify(r);
-      const chip = el("div", "chip" + (kind !== "normal" ? " chip-" + kind : ""));
+      const related = caseHighlightOn() && r.caseLabel && r.caseLabel === state.highlightCase;
+      const chip = el("div", "chip" + (kind !== "normal" ? " chip-" + kind : "") + (related ? " case-highlight" : ""));
       chip.style.borderLeftColor = stripeColor(r, kind);
+      if (caseHighlightOn() && r.caseLabel) { chip.dataset.case = r.caseLabel; chip.title = r.caseLabel; }
       const tt = r.due.timeStr ? '<span class="t">' + esc(r.due.timeStr) + "</span>" : "";
       const pre = kind === "complete" ? "\u2713 " : "";
       chip.innerHTML = tt + esc(pre + (r.title || "(untitled)"));
+      chip.onclick = (e) => {
+        e.stopPropagation();
+        state.selectedKey = key; state.focus = stripTime(d);
+        if (caseHighlightOn() && r.caseLabel) {
+          state.highlightCase = (state.highlightCase === r.caseLabel) ? null : r.caseLabel;
+        }
+        render();
+      };
+      makeDraggable(chip, r);
       cell.appendChild(chip);
     });
     if (recs.length > shown.length) cell.appendChild(Object.assign(el("div", "more"), { textContent: "+" + (recs.length - shown.length) + " more" }));
 
     cell.onclick = () => { state.selectedKey = key; state.focus = stripTime(d); render(); };
+    makeDropTarget(cell, d);
     grid.appendChild(cell);
   }
   wrap.appendChild(grid);
@@ -1318,6 +1474,7 @@ function renderMonth() {
   const list = el("div", "list");
   list.appendChild(dayListEl(state.selectedKey, false));
   panel.appendChild(list);
+  makeDropTarget(panel, sel);
   wrap.appendChild(panel);
   return wrap;
 }
@@ -1338,6 +1495,7 @@ function renderWeek() {
     const cb = el("div", "colbody");
     cb.appendChild(dayListEl(key, true));
     col.appendChild(cb);
+    makeDropTarget(col, d);
     wrap.appendChild(col);
   }
   return wrap;
@@ -1500,12 +1658,40 @@ document.addEventListener("click", () => {
   if (state.openPopover) { state.openPopover = null; changed = true; }
   if (state.openStatusRow !== null) { state.openStatusRow = null; changed = true; }
   if (state.openDateRow !== null) { state.openDateRow = null; changed = true; }
+  if (state.highlightCase !== null) { state.highlightCase = null; changed = true; }
   if (changed) render();
 });
 
 /* ===================== Grist wiring ===================== */
 function selectInGrist(rowId) {
   try { grist.setCursorPos({ rowId }); } catch (e) { /* linked-cursor optional */ }
+}
+
+// Permanently remove a deadline from the source table.
+async function deleteTask(rowId, title) {
+  const label = title && String(title).trim() ? "\u201c" + String(title).trim() + "\u201d" : "this deadline";
+  if (!confirm("Delete " + label + "? This removes it from the table and cannot be undone here.")) return;
+  try {
+    await grist.selectedTable.destroy(rowId);
+  } catch (e) {
+    try {
+      const tid = await grist.selectedTable.getTableId();
+      await grist.docApi.applyUserActions([["RemoveRecord", tid, rowId]]);
+    } catch (e2) {
+      console.error("delete failed", e2);
+      const msg = String((e2 && e2.message) || e2 || "");
+      if (/access|permission|read-only|denied/i.test(msg)) {
+        alert("Could not delete the deadline: the widget needs full (read \u0026 write) access. " +
+              "Open the creator panel and set access to Full.");
+      } else {
+        alert("Could not delete the deadline." + (msg ? " Grist reported: " + msg : ""));
+      }
+      return;
+    }
+  }
+  // Deselect/clean up any UI state pointing at the row we just removed.
+  if (state.expandedRows) state.expandedRows.delete(rowId);
+  render();
 }
 
 // Write a single field back to the source table, directly from the calendar.
@@ -1526,6 +1712,83 @@ async function writeField(rowId, colId, value, label) {
 }
 function setStatus(rowId, value) { if (state.mapped.status) writeField(rowId, state.statusColId, value, "status"); }
 function setDue(rowId, ts) { if (state.mapped.due) writeField(rowId, state.dueColId, ts, "due date"); }
+
+/* ===================== Drag-and-drop rescheduling ===================== */
+// Dragging is ephemeral UI state, not part of `state` (no need to persist or
+// trigger a full re-render on every dragover).
+let draggingId = null;
+
+// Move a task to a new day, preserving its time-of-day if the column is a
+// DateTime. A drop back onto the task's current day is a harmless no-op.
+function moveTaskToDay(rec, targetDate) {
+  if (!rec || !rec.due) return;
+  const curKey = dayKeyFromYMD(rec.due.y, rec.due.mo, rec.due.d);
+  const targetKey = dayKeyFromDate(targetDate);
+  if (curKey === targetKey) return;
+  const timeStr = (state.dueIsDateTime && rec.due.minuteOfDay >= 0)
+    ? pad2(Math.floor(rec.due.minuteOfDay / 60)) + ":" + pad2(rec.due.minuteOfDay % 60)
+    : null;
+  setDue(rec.id, encodeDue(iso(targetDate), timeStr));
+}
+
+// Make an element a drag SOURCE representing task `r`.
+function makeDraggable(node, r) {
+  node.draggable = true;
+  node.addEventListener("dragstart", (e) => {
+    draggingId = r.id;
+    try { e.dataTransfer.setData("text/plain", String(r.id)); e.dataTransfer.effectAllowed = "move"; } catch (err) {}
+    node.classList.add("dragging");
+    // Highlight every other deadline for the same case, so you can see whether
+    // you're about to drag this task past a related one. Applied directly to the
+    // live DOM (not via render()) so an in-progress native drag isn't disrupted
+    // by the whole calendar being rebuilt underneath it.
+    if (caseHighlightOn() && r.caseLabel) {
+      document.querySelectorAll('[data-case]').forEach(n => {
+        if (n.dataset.case === r.caseLabel) n.classList.add("case-highlight");
+      });
+    }
+  });
+  node.addEventListener("dragend", () => {
+    draggingId = null;
+    node.classList.remove("dragging");
+    document.querySelectorAll(".dragover").forEach(n => n.classList.remove("dragover"));
+    // Only clear the drag-applied highlight, not one the user set by clicking a
+    // chip/row \u2014 that's tracked in state and re-applied by the next render().
+    if (!(caseHighlightOn() && r.caseLabel && r.caseLabel === state.highlightCase)) {
+      document.querySelectorAll('[data-case="' + cssEscape(r.caseLabel || "") + '"].case-highlight')
+        .forEach(n => n.classList.remove("case-highlight"));
+    }
+  });
+}
+
+// Minimal CSS.escape fallback for building an attribute-value selector safely
+// (case names can contain quotes, parens, etc.).
+function cssEscape(s) {
+  if (window.CSS && CSS.escape) return CSS.escape(s);
+  return String(s).replace(/["\\]/g, "\\$&");
+}
+
+// Make an element a drop TARGET for day `targetDate`.
+function makeDropTarget(node, targetDate) {
+  node.addEventListener("dragover", (e) => {
+    if (draggingId == null) return;
+    e.preventDefault();
+    try { e.dataTransfer.dropEffect = "move"; } catch (err) {}
+    node.classList.add("dragover");
+  });
+  node.addEventListener("dragleave", () => node.classList.remove("dragover"));
+  node.addEventListener("drop", (e) => {
+    e.preventDefault();
+    node.classList.remove("dragover");
+    let idStr = "";
+    try { idStr = e.dataTransfer.getData("text/plain"); } catch (err) {}
+    const id = idStr ? Number(idStr) : draggingId;
+    draggingId = null;
+    if (id == null || Number.isNaN(id)) return;
+    const rec = state.records.find(x => x.id === id);
+    if (rec) moveTaskToDay(rec, targetDate);
+  });
+}
 function setDescription(rowId, text) {
   if (state.mapped.description) writeField(rowId, state.descColId, (text && text.trim() !== "") ? text : null, "description");
 }
@@ -1677,6 +1940,8 @@ function persist() {
       hiddenAsgs: Array.from(state.hiddenAsgs),
       hiddenStatuses: Array.from(state.hiddenStatuses),
       redCats: Array.from(state.redCats),
+      showOutsideDeadlines: state.showOutsideDeadlines,
+      caseHighlightEnabled: state.caseHighlightEnabled,
     });
   } catch (e) {}
 }
@@ -1821,6 +2086,8 @@ if (state.haveGrist) {
     if (Array.isArray(opts.hiddenAsgs)) state.hiddenAsgs = new Set(opts.hiddenAsgs);
     if (Array.isArray(opts.hiddenStatuses)) state.hiddenStatuses = new Set(opts.hiddenStatuses);
     if (Array.isArray(opts.redCats)) { state.redCats = new Set(opts.redCats); state.redCatsInit = true; }
+    if (typeof opts.showOutsideDeadlines === "boolean") state.showOutsideDeadlines = opts.showOutsideDeadlines;
+    if (typeof opts.caseHighlightEnabled === "boolean") state.caseHighlightEnabled = opts.caseHighlightEnabled;
     render();
   });
 
@@ -1835,6 +2102,130 @@ if (state.haveGrist) {
       refreshCaseIds().then(render);
     }
   });
+} else {
+  /* ===================== Demo data (preview outside Grist) =====================
+     Lets you try every feature \u2014 filters, editing, the Case picker, drag-and-
+     drop rescheduling, delete \u2014 before connecting a real Grist document. Runs
+     through the exact same ingest() used for live data, so what you see here is
+     what you'll get once this is wired to your table. Edits are in-memory only
+     and reset if you reload the page. */
+  state.demoMode = true;
+
+  const DEMO_MAPPINGS = {
+    DueDate: "DueDate", Title: "Title", Status: "Status", Description: "Description",
+    DaysLeft: "DaysLeft", Category: "Category", Case: "Case", AssignedTo: "AssignedTo", Priority: "Priority",
+  };
+  // Case is a true Reference column in this scenario (the common law-firm setup:
+  // a Case/Matter column referencing a master case-list table by name).
+  state.caseTypeKnown = true; state.caseIsRef = true; state.caseTargetTable = "Cases";
+  const CASE_IDS = {
+    "Reyes v. North Shore Logistics": 501,
+    "Kowalski v. City of Cicero": 502,
+    "Mbeki v. Elmhurst Hosp.": 503,
+    "Okonkwo v. Guaranteed Rate": 504,
+    "Intake": 505,
+  };
+
+  function demoDue(daysFromToday, hh, mm) {
+    const d = new Date(); d.setDate(d.getDate() + daysFromToday);
+    if (hh !== undefined) { d.setHours(hh, mm || 0, 0, 0); return Math.floor(d.getTime() / 1000); }
+    return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 1000);
+  }
+  const L = (...names) => ["L"].concat(names); // Grist ChoiceList cell marker
+
+  let demoRows = [
+    { id: 1, Title: "Serve Rule 26(a) initial disclosures", Case: "Reyes v. North Shore Logistics",
+      Category: "Discovery", AssignedTo: L("Dana Whitfield"), Priority: "High", Status: "Incomplete",
+      DueDate: demoDue(-3), DaysLeft: -3,
+      Description: "N.D. Ill. FRCP 26(a)(1) initial disclosures were due Monday; opposing counsel hasn't agreed to an extension." },
+    { id: 2, Title: "File motion to compel", Case: "Kowalski v. City of Cicero",
+      Category: "Motion", AssignedTo: L("Marcus Obi"), Priority: "High", Status: "Incomplete",
+      DueDate: demoDue(-1), DaysLeft: -1, Description: "" },
+    { id: 3, Title: "Client intake call \u2014 new referral", Case: "Intake",
+      Category: "Client", AssignedTo: L("Sam Ortega"), Priority: "Medium", Status: "Incomplete",
+      DueDate: demoDue(0, 10, 0), DaysLeft: 0, Description: "Referred by the Cook County Bar lawyer referral service." },
+    { id: 4, Title: "Respond to motion to dismiss", Case: "Okonkwo v. Guaranteed Rate",
+      Category: "Motion", AssignedTo: L("Priya Raman"), Priority: "High", Status: "Incomplete",
+      DueDate: demoDue(0, 17, 0), DaysLeft: 0, Description: "Response to the 2-615 motion is due by end of day." },
+    { id: 5, Title: "Deposition \u2014 Dr. Adeyemi", Case: "Mbeki v. Elmhurst Hosp.",
+      Category: "Discovery", AssignedTo: L("Priya Raman", "Dana Whitfield"), Priority: "Medium", Status: "Incomplete",
+      DueDate: demoDue(2, 9, 30), DaysLeft: 2, Description: "Rush, Oak Park office. Bring the radiology exhibits." },
+    { id: 6, Title: "SOL \u2014 file complaint", Case: "Okonkwo v. Guaranteed Rate",
+      Category: "SOL / Limitations", AssignedTo: L("Priya Raman"), Priority: "High", Status: "Incomplete",
+      DueDate: demoDue(5), DaysLeft: 5, Description: "735 ILCS 5/13-202 two-year statute of limitations. Do not miss." },
+    { id: 7, Title: "Settlement conference", Case: "Kowalski v. City of Cicero",
+      Category: "Trial Prep", AssignedTo: L("Marcus Obi", "Dana Whitfield"), Priority: "Medium", Status: "Incomplete",
+      DueDate: demoDue(5, 13, 0), DaysLeft: 5, Description: "" },
+    { id: 8, Title: "Draft written discovery responses", Case: "Reyes v. North Shore Logistics",
+      Category: "Discovery", AssignedTo: L("Dana Whitfield"), Priority: "Low", Status: "Ready",
+      DueDate: demoDue(5), DaysLeft: 5, Description: "" },
+    { id: 9, Title: "Witness disclosure \u2014 Rule 213(f)", Case: "Mbeki v. Elmhurst Hosp.",
+      Category: "Discovery", AssignedTo: L("Priya Raman"), Priority: "High", Status: "Incomplete",
+      DueDate: demoDue(7), DaysLeft: 7, Description: "Ill. S. Ct. R. 213(f) expert and lay witness disclosures." },
+    { id: 10, Title: "Trial \u2014 jury selection", Case: "Kowalski v. City of Cicero",
+      Category: "Trial Prep", AssignedTo: L("Marcus Obi"), Priority: "High", Status: "Incomplete",
+      DueDate: demoDue(21), DaysLeft: 21, Description: "" },
+    { id: 11, Title: "File answer to counterclaim", Case: "Reyes v. North Shore Logistics",
+      Category: "Filing", AssignedTo: L("Dana Whitfield"), Priority: "Medium", Status: "Complete",
+      DueDate: demoDue(-6), DaysLeft: -6, Description: "" },
+    { id: 12, Title: "Send engagement letter", Case: "Intake",
+      Category: "Client", AssignedTo: L("Sam Ortega"), Priority: "Low", Status: "Complete",
+      DueDate: demoDue(-10), DaysLeft: -10, Description: "" },
+    { id: 13, Title: "Records request \u2014 Elmhurst Hospital", Case: "Mbeki v. Elmhurst Hosp.",
+      Category: "Discovery", AssignedTo: L("Priya Raman"), Priority: "Medium", Status: "Incomplete",
+      DueDate: demoDue(1), DaysLeft: 1, Description: "HIPAA-compliant authorization already signed by the client." },
+    { id: 14, Title: "Quarterly trust account reconciliation", Case: null,
+      Category: "Admin", AssignedTo: L("Sam Ortega", "Dana Whitfield"), Priority: "Low", Status: "Incomplete",
+      DueDate: demoDue(10), DaysLeft: 10, Description: "Ill. Rule 1.15 trust accounting \u2014 no case, firm-wide task." },
+    { id: 15, Title: "Prepare exhibit binder", Case: "Kowalski v. City of Cicero",
+      Category: "Trial Prep", AssignedTo: L("Marcus Obi"), Priority: "Medium", Status: "Incomplete",
+      DueDate: demoDue(19), DaysLeft: 19, Description: "" },
+    { id: 16, Title: "Follow up on settlement offer", Case: "Okonkwo v. Guaranteed Rate",
+      Category: "Client", AssignedTo: L("Priya Raman"), Priority: "Low", Status: "Incomplete",
+      DueDate: demoDue(3), DaysLeft: 3, Description: "" },
+    // Undated \u2014 exercises the "needs attention" panel.
+    { id: 17, Title: "Schedule IME", Case: "Mbeki v. Elmhurst Hosp.",
+      Category: "Discovery", AssignedTo: L("Priya Raman"), Priority: "Medium", Status: "Incomplete",
+      DueDate: null, DaysLeft: null, Description: "" },
+    { id: 18, Title: "Open new matter \u2014 Torres referral", Case: "Intake",
+      Category: "Client", AssignedTo: L("Sam Ortega"), Priority: null, Status: "Incomplete",
+      DueDate: null, DaysLeft: null, Description: "" },
+  ];
+  let demoNextId = 19;
+
+  function demoIngestAndRender() {
+    ingest(demoRows, DEMO_MAPPINGS);
+    // A live doc would resolve these via refreshCaseIds(); here we already know them.
+    Object.keys(state.caseRegistry).forEach(label => {
+      if (CASE_IDS[label] !== undefined) state.caseRegistry[label] = CASE_IDS[label];
+    });
+    render();
+  }
+
+  writeField = async (rowId, colId, value) => {
+    if (!colId) return;
+    const row = demoRows.find(x => x.id === rowId);
+    if (row) row[colId] = value;
+    demoIngestAndRender();
+  };
+  createTask = async (fields) => {
+    const row = Object.assign({ id: demoNextId++ }, fields);
+    demoRows.push(row);
+    demoIngestAndRender();
+    return true;
+  };
+  deleteTask = async (rowId, title) => {
+    const label = title && String(title).trim() ? "\u201c" + String(title).trim() + "\u201d" : "this deadline";
+    if (!confirm("Delete " + label + "? (Demo data \u2014 this only affects your preview.)")) return;
+    demoRows = demoRows.filter(x => x.id !== rowId);
+    state.expandedRows.delete(rowId);
+    demoIngestAndRender();
+  };
+  selectInGrist = () => { /* no-op \u2014 nothing to jump to outside a real doc */ };
+  detectColumnTypes = async () => { /* types are set directly above for demo data */ };
+  refreshCaseIds = async () => { /* ids are seeded directly in demoIngestAndRender */ };
+
+  demoIngestAndRender();
 }
 
 render();
