@@ -122,6 +122,12 @@
   .settings-text { flex: 1; min-width: 0; }
   .settings-label { font-size: 13px; color: var(--ink); }
   .settings-hint { font-size: 11px; color: var(--ink-faint); margin-top: 2px; line-height: 1.35; }
+  .settings-selectrow { padding-top: 8px; padding-bottom: 8px; }
+  .settings-select {
+    margin-top: 6px; width: 100%; font: inherit; font-size: 12.5px; padding: 5px 8px;
+    border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; color: var(--ink);
+  }
+  .settings-row + .settings-row { border-top: 1px solid var(--line); }
   .popactions { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); margin-top: 4px; }
   .popactions button { flex: 1; border: 1px solid var(--line-strong); background: #fff; border-radius: 6px; padding: 5px; cursor: pointer; font: inherit; color: var(--ink-soft); }
   .popactions button:hover { background: #eef1ef; }
@@ -358,6 +364,19 @@
 
   /* Messages */
   .notice { padding: 28px; max-width: 460px; margin: 24px auto; text-align: center; color: var(--ink-soft); }
+
+  /* Agenda */
+  .agenda { padding: 12px 14px 24px; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+  .agenda-empty { padding: 40px 12px; text-align: center; color: var(--ink-faint); font-size: 14px; }
+  .agenda-band {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    padding: 10px 4px 4px; color: var(--ink-faint);
+  }
+  .agenda-band:first-child { padding-top: 2px; }
+  .agenda-band-3 { color: var(--red); }
+  .agenda-band-2 { color: #8a5a12; }
+  .agenda-band-1 { color: var(--ink-soft); }
+  .agenda-band-0 { color: var(--ink-faint); }
   .notice h2 { font-family: var(--display); color: var(--ink); }
   .notice code { background: #f0f2f0; padding: 1px 5px; border-radius: 4px; }
   .notice ol { text-align: left; line-height: 1.7; }
@@ -428,7 +447,18 @@
 //       ("Highlight related deadlines"), on by default. Turning it off also
 //       clears any highlight currently showing. Only appears in Settings when
 //       a Case column is mapped.
-const WIDGET_VERSION = "3.2";
+// 3.3 — Four new settings: "Start week on" (any day, not just Sunday/Monday —
+//       Month grid, Week view, and the week-range label all follow it, even
+//       when the weekend ends up in the middle of the row); "Hide weekends"
+//       (drops Sat/Sun columns from Month/Week view); "Deadlines shown per
+//       day" (2–6, was fixed at 3); "Time format" (12-hour or 24-hour).
+// 3.4 — Added an "Agenda" view: a flat, ranked list of every pending (non-
+//       complete) deadline, grouped into Overdue / Due Soon / Upcoming / No
+//       Date. Ranking is band-first (overdue always outranks upcoming),
+//       High priority breaks ties within a band, then soonest/most-overdue
+//       first — computed straight from the due date, so it works without
+//       any extra column mappings.
+const WIDGET_VERSION = "3.4";
 
 /* ===================== State ===================== */
 const today = new Date();
@@ -471,6 +501,10 @@ const state = {
   showOutsideDeadlines: true,   // show/hide deadlines in the greyed-out lead/trail days of month view
   highlightCase: null,          // case label whose other deadlines are currently highlighted
   caseHighlightEnabled: true,   // whether clicking/dragging a deadline highlights its case-mates
+  weekStartDay: 0,       // 0=Sunday .. 6=Saturday \u2014 which day begins a week
+  maxChipsPerDay: 3,     // deadlines shown directly in a month-view cell before "+N more"
+  timeFormat: "12h",     // "12h" (AM/PM) or "24h"
+  hideWeekends: false,   // omit Saturday/Sunday columns from Month and Week view
   openStatusRow: null,  // rowId whose status menu is open
   openDateRow: null,    // rowId whose due-date editor is open
   editingDescRow: null, // rowId whose description editor is open
@@ -494,12 +528,24 @@ function stripTime(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate
 function dayKeyFromYMD(y, m, d) { return y + "-" + m + "-" + d; }       // m is 0-indexed
 function dayKeyFromDate(d) { return dayKeyFromYMD(d.getFullYear(), d.getMonth(), d.getDate()); }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
-function startOfWeek(d) { const x = stripTime(d); return addDays(x, -x.getDay()); } // Sunday start
+function startOfWeek(d) {
+  const x = stripTime(d);
+  const diff = (x.getDay() - state.weekStartDay + 7) % 7;
+  return addDays(x, -diff);
+}
+// The ordered list of weekday indices (0=Sun..6=Sat) to display as columns,
+// rotated to start on state.weekStartDay, with Sat/Sun dropped if hidden.
+function visibleDowIndices() {
+  const order = [];
+  for (let i = 0; i < 7; i++) order.push((state.weekStartDay + i) % 7);
+  return state.hideWeekends ? order.filter(d => d !== 0 && d !== 6) : order;
+}
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 function fmtTime(h, m) {
+  if (state.timeFormat === "24h") return pad2(h) + ":" + pad2(m);
   const ap = h >= 12 ? "PM" : "AM";
   let hh = h % 12; if (hh === 0) hh = 12;
   return hh + ":" + String(m).padStart(2, "0") + " " + ap;
@@ -675,6 +721,7 @@ function render() {
   renderMeta();
   if (state.view === "month") body.innerHTML = "", body.appendChild(renderMonth());
   else if (state.view === "week") body.innerHTML = "", body.appendChild(renderWeek());
+  else if (state.view === "agenda") body.innerHTML = "", body.appendChild(renderAgenda());
   else body.innerHTML = "", body.appendChild(renderDay());
   adjustClamps();
   renderUnplacedOverlay();
@@ -776,23 +823,25 @@ function renderToolbar() {
   tb.innerHTML = "";
 
   const seg = el("div", "seg");
-  ["day","week","month"].forEach(v => {
+  [["day","Day"],["week","Week"],["month","Month"],["agenda","Agenda"]].forEach(([v, label]) => {
     const b = el("button", v === state.view ? "active" : "");
-    b.textContent = v[0].toUpperCase() + v.slice(1);
+    b.textContent = label;
     b.onclick = () => { state.view = v; persist(); render(); };
     seg.appendChild(b);
   });
   tb.appendChild(seg);
 
-  const nav = el("div", "nav");
-  const prev = el("button", "iconbtn"); prev.innerHTML = "&#8249;"; prev.title = "Previous";
-  prev.onclick = () => shift(-1);
-  const todayB = el("button", "todaybtn"); todayB.textContent = "Today";
-  todayB.onclick = () => { state.focus = stripTime(new Date()); state.selectedKey = dayKeyFromDate(state.focus); render(); };
-  const next = el("button", "iconbtn"); next.innerHTML = "&#8250;"; next.title = "Next";
-  next.onclick = () => shift(1);
-  nav.append(prev, todayB, next);
-  tb.appendChild(nav);
+  if (state.view !== "agenda") {
+    const nav = el("div", "nav");
+    const prev = el("button", "iconbtn"); prev.innerHTML = "&#8249;"; prev.title = "Previous";
+    prev.onclick = () => shift(-1);
+    const todayB = el("button", "todaybtn"); todayB.textContent = "Today";
+    todayB.onclick = () => { state.focus = stripTime(new Date()); state.selectedKey = dayKeyFromDate(state.focus); render(); };
+    const next = el("button", "iconbtn"); next.innerHTML = "&#8250;"; next.title = "Next";
+    next.onclick = () => shift(1);
+    nav.append(prev, todayB, next);
+    tb.appendChild(nav);
+  }
 
   const period = el("div", "period");
   period.textContent = periodLabel();
@@ -835,9 +884,20 @@ function shift(dir) {
 
 function periodLabel() {
   const f = state.focus;
+  if (state.view === "agenda") return "Pending Deadlines";
   if (state.view === "month") return MONTHS[f.getMonth()] + " " + f.getFullYear();
   if (state.view === "day") return DOW[f.getDay()] + ", " + MONTHS[f.getMonth()] + " " + f.getDate() + ", " + f.getFullYear();
-  const s = startOfWeek(f), e = addDays(s, 6);
+  const s = startOfWeek(f);
+  let e = addDays(s, 6);
+  if (state.hideWeekends) {
+    // The weekend's position within the 7-day span shifts with weekStartDay
+    // (e.g. a Wednesday-start week has the weekend in the middle, not the end),
+    // so find the latest actual weekday rather than assuming a fixed offset.
+    for (let k = 6; k >= 0; k--) {
+      const cand = addDays(s, k);
+      if (cand.getDay() !== 0 && cand.getDay() !== 6) { e = cand; break; }
+    }
+  }
   if (s.getMonth() === e.getMonth()) return MONTHS[s.getMonth()] + " " + s.getDate() + "\u2013" + e.getDate() + ", " + s.getFullYear();
   return MONTHS[s.getMonth()].slice(0,3) + " " + s.getDate() + " \u2013 " + MONTHS[e.getMonth()].slice(0,3) + " " + e.getDate() + ", " + e.getFullYear();
 }
@@ -969,6 +1029,24 @@ function settingsToggleRow(label, hint, checked, onChange) {
   return row;
 }
 
+// options: [[value, label], ...]
+function settingsSelectRow(label, hint, options, value, onChange) {
+  const row = el("div", "poprow settings-row settings-selectrow");
+  const text = el("div", "settings-text");
+  text.appendChild(Object.assign(el("div", "settings-label"), { textContent: label }));
+  if (hint) text.appendChild(Object.assign(el("div", "settings-hint"), { textContent: hint }));
+  const sel = document.createElement("select"); sel.className = "settings-select";
+  options.forEach(([v, l]) => {
+    const o = document.createElement("option"); o.value = String(v); o.textContent = l;
+    if (String(v) === String(value)) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.onchange = () => onChange(sel.value);
+  text.appendChild(sel);
+  row.appendChild(text);
+  return row;
+}
+
 function settingsDropdown() {
   const wrap = el("div", "dropwrap");
   const btn = el("button", "iconbtn");
@@ -982,6 +1060,37 @@ function settingsDropdown() {
     pop.onclick = (e) => e.stopPropagation();
     pop.appendChild(popHeader("Settings"));
     const list = el("div", "poplist");
+
+    list.appendChild(settingsSelectRow(
+      "Start week on",
+      "Which day begins each week in Week view and the Month grid.",
+      DOW.map((name, idx) => [idx, name]),
+      state.weekStartDay,
+      (v) => { state.weekStartDay = parseInt(v, 10); persist(); render(); }
+    ));
+
+    list.appendChild(settingsToggleRow(
+      "Hide weekends",
+      "Omit Saturday and Sunday columns from Month and Week view.",
+      state.hideWeekends,
+      (checked) => { state.hideWeekends = checked; persist(); render(); }
+    ));
+
+    list.appendChild(settingsSelectRow(
+      "Deadlines shown per day",
+      "How many deadlines a Month-view cell shows before collapsing the rest into \u201c+N more.\u201d",
+      [[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"]],
+      state.maxChipsPerDay,
+      (v) => { state.maxChipsPerDay = parseInt(v, 10); persist(); render(); }
+    ));
+
+    list.appendChild(settingsSelectRow(
+      "Time format",
+      "How times are displayed for timed deadlines.",
+      [["12h","12-hour (2:30 PM)"],["24h","24-hour (14:30)"]],
+      state.timeFormat,
+      (v) => { state.timeFormat = v; persist(); render(); }
+    ));
 
     list.appendChild(settingsToggleRow(
       "Show deadlines from other months",
@@ -1413,20 +1522,89 @@ function dayListEl(key, compact) {
   return frag;
 }
 
+/* ---- Agenda: a flat, ranked list of pending deadlines ----
+   Ranking mirrors the Work Queue widgets' discipline (band dominates, then
+   priority, then date) but is computed entirely from the due date, so it
+   works even without the optional Days-to-Complete-style fields those
+   widgets use. Band always wins; priority only breaks ties within a band. */
+function daysUntilDue(r) {
+  if (!r.due) return null;
+  const target = new Date(r.due.y, r.due.mo, r.due.d);
+  return Math.round((target - stripTime(new Date())) / 86400000);
+}
+const AGENDA_BANDS = ["No date", "Upcoming", "Due soon", "Overdue"];
+function agendaBand(r) {
+  const dl = daysUntilDue(r);
+  if (dl === null) return 0;       // undated -> lowest, sorts last
+  if (dl < 0) return 3;            // overdue -> highest
+  if (dl <= 3) return 2;           // due today through 3 days out
+  return 1;                        // everything else upcoming
+}
+function agendaCompare(a, b) {
+  const ba = agendaBand(a), bb = agendaBand(b);
+  if (ba !== bb) return bb - ba;                                   // band dominates
+  const pa = (state.mapped.priority && isImportant(a.priority)) ? 1 : 0;
+  const pb = (state.mapped.priority && isImportant(b.priority)) ? 1 : 0;
+  if (pa !== pb) return pb - pa;                                   // High priority breaks ties within a band
+  const da = daysUntilDue(a), db = daysUntilDue(b);
+  if (da === null && db === null) return String(a.title || "").localeCompare(String(b.title || ""));
+  if (da === null) return 1;
+  if (db === null) return -1;
+  return da - db;                                                  // most overdue / soonest first
+}
+function renderAgenda() {
+  const wrap = el("div", "agenda");
+  const dated = state.records.filter(r => isVisible(r) && !isComplete(r));
+  // Unplaced records have no r.due at all, so they can't go through rowEl()
+  // (which assumes a real due date) \u2014 render them with the same widget
+  // used by the "needs attention" panel instead.
+  const undated = state.unplaced.filter(u => isVisible(u) && !isComplete(u));
+  const pending = dated.slice().sort(agendaCompare);
+
+  if (!pending.length && !undated.length) {
+    wrap.appendChild(Object.assign(el("div", "agenda-empty"), { textContent: "Nothing pending \u2014 you're caught up." }));
+    return wrap;
+  }
+
+  let lastBand = null;
+  pending.forEach(r => {
+    const band = agendaBand(r);
+    if (band !== lastBand) {
+      const hd = el("div", "agenda-band agenda-band-" + band);
+      hd.textContent = AGENDA_BANDS[band] + " \u00b7 " + pending.filter(x => agendaBand(x) === band).length;
+      wrap.appendChild(hd);
+      lastBand = band;
+    }
+    wrap.appendChild(rowEl(r, false));
+  });
+
+  if (undated.length) {
+    const hd = el("div", "agenda-band agenda-band-0");
+    hd.textContent = "No date \u00b7 " + undated.length;
+    wrap.appendChild(hd);
+    undated.forEach(u => wrap.appendChild(unplacedItem(u)));
+  }
+  return wrap;
+}
+
 /* ---- Month ---- */
 function renderMonth() {
   const wrap = el("div", "month");
+  const cols = visibleDowIndices();
   const head = el("div", "weekhead");
-  DOW.forEach(d => head.appendChild(Object.assign(el("div"), { textContent: d })));
+  head.style.gridTemplateColumns = "repeat(" + cols.length + ", 1fr)";
+  cols.forEach(idx => head.appendChild(Object.assign(el("div"), { textContent: DOW[idx] })));
   wrap.appendChild(head);
 
   const grid = el("div", "grid");
+  grid.style.gridTemplateColumns = "repeat(" + cols.length + ", 1fr)";
   const first = new Date(state.focus.getFullYear(), state.focus.getMonth(), 1);
   const start = startOfWeek(first);
   const todayKey = dayKeyFromDate(new Date());
 
   for (let i = 0; i < 42; i++) {
     const d = addDays(start, i);
+    if (state.hideWeekends && (d.getDay() === 0 || d.getDay() === 6)) continue;
     const key = dayKeyFromDate(d);
     const outside = d.getMonth() !== state.focus.getMonth();
     const cell = el("div", "cell" + (outside ? " outside" : "")
@@ -1434,7 +1612,7 @@ function renderMonth() {
     cell.appendChild(Object.assign(el("div", "daynum"), { textContent: d.getDate() }));
 
     const recs = (outside && !state.showOutsideDeadlines) ? [] : recordsForKey(key);
-    const shown = recs.slice(0, 3);
+    const shown = recs.slice(0, state.maxChipsPerDay);
     shown.forEach(r => {
       const kind = classify(r);
       const related = caseHighlightOn() && r.caseLabel && r.caseLabel === state.highlightCase;
@@ -1482,10 +1660,13 @@ function renderMonth() {
 /* ---- Week ---- */
 function renderWeek() {
   const wrap = el("div", "week");
+  const cols = visibleDowIndices();
+  wrap.style.gridTemplateColumns = "repeat(" + cols.length + ", minmax(150px, 1fr))";
   const start = startOfWeek(state.focus);
   const todayKey = dayKeyFromDate(new Date());
   for (let i = 0; i < 7; i++) {
     const d = addDays(start, i);
+    if (state.hideWeekends && (d.getDay() === 0 || d.getDay() === 6)) continue;
     const key = dayKeyFromDate(d);
     const col = el("div", "weekcol" + (key === todayKey ? " today" : "") + (key === state.selectedKey ? " selected" : ""));
     const ch = el("div", "colhead");
@@ -1942,6 +2123,10 @@ function persist() {
       redCats: Array.from(state.redCats),
       showOutsideDeadlines: state.showOutsideDeadlines,
       caseHighlightEnabled: state.caseHighlightEnabled,
+      weekStartDay: state.weekStartDay,
+      hideWeekends: state.hideWeekends,
+      maxChipsPerDay: state.maxChipsPerDay,
+      timeFormat: state.timeFormat,
     });
   } catch (e) {}
 }
@@ -2088,6 +2273,10 @@ if (state.haveGrist) {
     if (Array.isArray(opts.redCats)) { state.redCats = new Set(opts.redCats); state.redCatsInit = true; }
     if (typeof opts.showOutsideDeadlines === "boolean") state.showOutsideDeadlines = opts.showOutsideDeadlines;
     if (typeof opts.caseHighlightEnabled === "boolean") state.caseHighlightEnabled = opts.caseHighlightEnabled;
+    if (typeof opts.weekStartDay === "number" && opts.weekStartDay >= 0 && opts.weekStartDay <= 6) state.weekStartDay = opts.weekStartDay;
+    if (typeof opts.hideWeekends === "boolean") state.hideWeekends = opts.hideWeekends;
+    if (typeof opts.maxChipsPerDay === "number" && opts.maxChipsPerDay >= 1) state.maxChipsPerDay = opts.maxChipsPerDay;
+    if (opts.timeFormat === "12h" || opts.timeFormat === "24h") state.timeFormat = opts.timeFormat;
     render();
   });
 
