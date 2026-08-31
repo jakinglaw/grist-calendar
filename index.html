@@ -29,6 +29,8 @@
     --red-soft: #fbecea;
     --case-hl: #6a4fa0;
     --case-hl-soft: #efe9f7;
+    --search-hl: #c9971a;
+    --search-hl-soft: #fff6df;
     --radius: 8px;
     --shadow: 0 1px 2px rgba(20,40,38,.06), 0 6px 20px rgba(20,40,38,.07);
     --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -63,6 +65,22 @@
     padding: 2px 8px; border: 1px solid #e6d0a0; border-radius: 20px;
     background: #fdf3e0; white-space: nowrap; align-self: center;
   }
+  .searchwrap { display: flex; align-items: center; gap: 4px; flex: 1 1 220px; max-width: 360px; min-width: 160px; }
+  .searchinput {
+    flex: 1; min-width: 0; font: inherit; font-size: 12.5px; padding: 6px 9px;
+    border: 1px solid var(--line-strong); border-radius: 7px; background: #fff; color: var(--ink);
+  }
+  .searchinput:focus { outline: none; border-color: var(--search-hl); box-shadow: 0 0 0 3px var(--search-hl-soft); }
+  .search-count { font-size: 11px; color: var(--search-hl); font-weight: 700; white-space: nowrap; }
+  .searchnav { flex: none; border: 1px solid var(--line-strong); background: #fff; color: var(--ink-soft); cursor: pointer; font-size: 12px; width: 22px; height: 22px; border-radius: 5px; line-height: 1; padding: 0; }
+  .searchnav:hover { background: var(--search-hl-soft); border-color: var(--search-hl); color: var(--search-hl); }
+  .searchclear { flex: none; border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; font-size: 12px; padding: 3px 5px; border-radius: 5px; }
+  .searchclear:hover { background: #eef1ef; color: var(--ink); }
+  .agenda-search-hd {
+    font-size: 11.5px; font-weight: 700; padding: 10px 4px 4px; color: var(--search-hl);
+    text-transform: none; letter-spacing: 0;
+  }
+  .agenda-search-hd.agenda-search-hd-rest { color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; font-size: 11px; padding-top: 16px; }
   .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }
   .seg button {
     border: 0; background: transparent; padding: 6px 12px; font: inherit; cursor: pointer;
@@ -177,7 +195,9 @@
   .chip.chip-ready { background: var(--green-mid); color: var(--green-ink); }
   .chip.chip-critical { background: var(--red-soft); color: var(--ink); font-weight: 600; }
   .chip.case-highlight { outline: 2px solid var(--case-hl); outline-offset: 1px; }
+  .chip.search-match { background: var(--search-hl-soft); outline: 2px solid var(--search-hl); outline-offset: 1px; font-weight: 600; }
   .more { font-size: 11px; color: var(--ink-faint); padding-left: 2px; }
+  .more.more-has-match { color: var(--search-hl); font-weight: 700; }
 
   /* Week */
   .week { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); min-height: 100%; }
@@ -204,6 +224,8 @@
   .row:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
   .row.dragging { opacity: .35; }
   .row.case-highlight { outline: 2px solid var(--case-hl); outline-offset: 2px; background: var(--case-hl-soft); }
+  .row.search-match { outline: 2px solid var(--search-hl); outline-offset: 2px; background: var(--search-hl-soft); }
+  .row.search-match.case-highlight { outline: 2px solid var(--search-hl); box-shadow: 0 0 0 4px var(--case-hl-soft); }
   .row .duewrap { position: relative; flex: none; }
   .row .time {
     font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 12px; min-width: 64px; padding: 1px 3px 0 0;
@@ -458,7 +480,46 @@
 //       High priority breaks ties within a band, then soonest/most-overdue
 //       first — computed straight from the due date, so it works without
 //       any extra column mappings.
-const WIDGET_VERSION = "3.4";
+// 3.5 — Added a live search box (title/description/case/category/assignee,
+//       multi-word AND). Matches are highlighted (a gold outline, distinct
+//       from the case-relation highlight) and PROMOTED — sorted ahead of
+//       non-matches in every view — rather than hiding non-matches. In
+//       Month view this also protects matches from "+N more" truncation; if
+//       a day has more matches than visible slots, the overflow line says
+//       so. Agenda view splits into a "Matching" section and an "Other
+//       pending" section so band headers don't confusingly repeat.
+// 3.6 — Added a Settings toggle, "Search hides non-matches" (off by default).
+//       Off = 3.5's promote-only behavior. On = search becomes a true filter:
+//       non-matching deadlines disappear from Month/Week/Day/Agenda entirely
+//       instead of just sorting lower. Has no effect while the search box is
+//       empty.
+// 3.7 — Enter in the search box jumps the calendar to the next matching
+//       deadline's day (Shift+Enter for previous), stepping through matches
+//       in chronological order across months — with ‹ › buttons and a
+//       "Match N of M" indicator as a mouse alternative. Switching from
+//       Agenda view happens automatically since Agenda has no single
+//       focused day to jump to. Typing resets the cycle position.
+// 3.8 — Added a "Color deadlines by" setting: Category (unchanged default) or
+//       Assigned person. Assignee mode colors each deadline by who's on it,
+//       using that person's own color from the Deadlines tab when Grist has
+//       one configured for them, otherwise a deterministic fallback so every
+//       person still gets a distinct, stable color. Deadlines with more than
+//       one assignee are split into equal color bands (halves, thirds, etc).
+//       Built as an extensible setting — more color modes can be added
+//       later without restructuring.
+// 3.9 — In Assigned Person mode, assignee color now takes priority over
+//       EVERYTHING, including completed (green) and critical (red) status —
+//       matching the setting's purpose of identity color being the dominant
+//       signal. Category mode is unchanged: status still wins over category
+//       there. A completed task's ✓ checkmark text still shows either way;
+//       only the competing background/border color is suppressed.
+// 4.0 — Fixed inconsistent highlighting in Assigned Person mode: a task with
+//       one assignee only had a colored border stripe (default pale
+//       background), while 2+ assignees got a fully colored split
+//       background. Single-assignee chips/rows are now fully highlighted
+//       too, using the same lightened tone as one band of the multi-person
+//       gradient, so every assigned deadline reads consistently.
+const WIDGET_VERSION = "4.0";
 
 /* ===================== State ===================== */
 const today = new Date();
@@ -505,6 +566,11 @@ const state = {
   maxChipsPerDay: 3,     // deadlines shown directly in a month-view cell before "+N more"
   timeFormat: "12h",     // "12h" (AM/PM) or "24h"
   hideWeekends: false,   // omit Saturday/Sunday columns from Month and Week view
+  search: "",            // live text search \u2014 highlights and promotes matches, doesn't hide non-matches
+  searchFiltersOut: false,   // when true, search HIDES non-matches instead of just demoting them
+  searchCycleIndex: null,    // which chronological match Enter-cycling is currently on
+  taskColorMode: "category", // "category" (current) | "assignee" \u2014 more modes may be added later
+  assigneeColors: {},        // person name -> hex color, read from Grist's own Choice/ChoiceList colors when available
   openStatusRow: null,  // rowId whose status menu is open
   openDateRow: null,    // rowId whose due-date editor is open
   editingDescRow: null, // rowId whose description editor is open
@@ -608,6 +674,35 @@ function catColor(label) {
   let h = 0; for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) >>> 0;
   return CAT_COLORS[h % CAT_COLORS.length];
 }
+// Color for a person: prefer the color Grist has configured for that value
+// in the Assigned To column itself (read via detectColumnTypes), falling
+// back to the same deterministic palette used for categories so everyone
+// still gets a distinct, stable color even without one configured in Grist.
+function personColor(name) {
+  if (state.assigneeColors && state.assigneeColors[name]) return state.assigneeColors[name];
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return CAT_COLORS[h % CAT_COLORS.length];
+}
+function lightenHex(hex, amt) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt);
+  return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
+}
+// A hard-stop gradient with one equal band per assignee (half-and-half for
+// two people, thirds for three, etc.), in pastel tones so chip/row text
+// stays legible on top of it.
+function assigneeSplitBackground(names) {
+  const n = names.length;
+  const stops = [];
+  names.forEach((name, i) => {
+    const c = lightenHex(personColor(name), 0.72);
+    stops.push(c + " " + (i / n * 100).toFixed(2) + "%", c + " " + ((i + 1) / n * 100).toFixed(2) + "%");
+  });
+  return "linear-gradient(90deg, " + stops.join(", ") + ")";
+}
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
@@ -651,12 +746,40 @@ function classify(r) {
   if (isCritical(r)) return "critical";
   return "normal";
 }
-function stripeColor(r, kind) {
-  if (kind === "complete" || kind === "ready") return "var(--green)";
-  if (kind === "critical") return "var(--red)";
+// Colors a chip/row. In "assignee" mode, who's assigned always wins \u2014 even
+// over completed/ready/critical status \u2014 per the setting's whole point:
+// assignee identity is the dominant signal. In "category" mode (default),
+// completed/ready/critical status still wins over category, as before.
+function applyTaskColor(node, r, kind) {
+  if (state.taskColorMode === "assignee" && state.mapped.assignedTo) {
+    const names = toList(r.assignedTo);
+    if (names.length >= 2) {
+      node.style.borderLeftColor = personColor(names[0]);
+      node.style.background = assigneeSplitBackground(names);
+      return;
+    }
+    if (names.length === 1) {
+      // A single assignee is treated as a 1-band "split" \u2014 same lightening
+      // as the multi-person gradient, so every assigned chip/row is fully
+      // colored, not just the ones with more than one person on them.
+      node.style.borderLeftColor = personColor(names[0]);
+      node.style.background = lightenHex(personColor(names[0]), 0.72);
+      return;
+    }
+    node.style.borderLeftColor = "var(--accent)";
+    return;
+  }
+  if (kind === "complete" || kind === "ready") { node.style.borderLeftColor = "var(--green)"; return; }
+  if (kind === "critical") { node.style.borderLeftColor = "var(--red)"; return; }
   const cats = recCats(r);
-  return (state.mapped.category && cats[0] !== NO_CAT) ? catColor(cats[0]) : "var(--accent)";
+  node.style.borderLeftColor = (state.mapped.category && cats[0] !== NO_CAT) ? catColor(cats[0]) : "var(--accent)";
 }
+// The CSS class suffix (chip-complete/chip-critical/row status classes) sets
+// its own background/text color independent of applyTaskColor's inline
+// styles \u2014 in assignee mode that would fight the assignee color, so it's
+// suppressed there. The "\u2713 " text prefix for completed items is untouched
+// (that's text, not color, so it doesn't compete with assignee coloring).
+function visualKind(kind) { return state.taskColorMode === "assignee" ? "normal" : kind; }
 
 function isVisible(r) {
   if (state.mapped.category) {
@@ -671,10 +794,59 @@ function isVisible(r) {
     const ss = recStatus(r);
     if (!ss.some(s => !state.hiddenStatuses.has(s))) return false;
   }
+  if (state.searchFiltersOut && searchActive() && !matchesSearch(r)) return false;
   return true;
 }
 
+/* ---- Search: highlights and promotes matches, never hides non-matches.
+   Matches title, description, case, category, and assignee; multi-word
+   searches are AND'd together. ---- */
+function matchesSearch(r) {
+  const q = (state.search || "").trim().toLowerCase();
+  if (!q) return false;
+  const hay = [
+    r.title, r.description, r.caseLabel,
+    state.mapped.category ? toList(r.category).join(" ") : "",
+    state.mapped.assignedTo ? toList(r.assignedTo).join(" ") : "",
+  ].filter(v => v !== null && v !== undefined).join(" ").toLowerCase();
+  return q.split(/\s+/).filter(Boolean).every(term => hay.indexOf(term) >= 0);
+}
+function searchActive() { return (state.search || "").trim() !== ""; }
+
+// Pure chronological order (earliest due date/time first) \u2014 distinct from
+// the ranking comparators, since stepping through search results should walk
+// the calendar in date order, not by urgency.
+function chronoCompare(a, b) {
+  if (a.due.y !== b.due.y) return a.due.y - b.due.y;
+  if (a.due.mo !== b.due.mo) return a.due.mo - b.due.mo;
+  if (a.due.d !== b.due.d) return a.due.d - b.due.d;
+  return (a.due.minuteOfDay || 0) - (b.due.minuteOfDay || 0);
+}
+function searchMatchesChrono() {
+  return state.records.filter(r => isVisible(r) && matchesSearch(r)).sort(chronoCompare);
+}
+// Move the calendar's focus to the next (or previous) matching deadline's
+// day, wrapping around. Only dated matches can be jumped to \u2014 an undated
+// match has no day to focus the calendar on.
+function cycleSearchMatch(dir) {
+  if (!searchActive()) return;
+  const matches = searchMatchesChrono();
+  if (!matches.length) return;
+  const cur = (typeof state.searchCycleIndex === "number") ? state.searchCycleIndex : -1;
+  const next = ((cur + dir) % matches.length + matches.length) % matches.length;
+  state.searchCycleIndex = next;
+  const r = matches[next];
+  state.focus = new Date(r.due.y, r.due.mo, r.due.d);
+  state.selectedKey = dayKeyFromYMD(r.due.y, r.due.mo, r.due.d);
+  if (state.view === "agenda") state.view = "month";   // agenda has no "focused day" to jump to
+  renderKeepFocus();
+}
+
 function compareRows(a, b) {
+  if (searchActive()) {
+    const ma = matchesSearch(a) ? 1 : 0, mb = matchesSearch(b) ? 1 : 0;
+    if (ma !== mb) return mb - ma;
+  }
   if (state.sortByPriority && state.mapped.priority) {
     const pa = priorityRank(a.priority), pb = priorityRank(b.priority);
     let c = pa.num - pb.num;
@@ -818,6 +990,13 @@ function renderMeta() {
 }
 
 /* ---- Toolbar ---- */
+function renderKeepFocus() {
+  const prev = document.getElementById("calSearch");
+  const pos = prev ? prev.selectionStart : null;
+  render();
+  const next = document.getElementById("calSearch");
+  if (next) { next.focus(); if (pos !== null) { try { next.setSelectionRange(pos, pos); } catch (e) {} } }
+}
 function renderToolbar() {
   const tb = document.getElementById("toolbar");
   tb.innerHTML = "";
@@ -864,6 +1043,37 @@ function renderToolbar() {
     badge.title = "Sample deadlines for previewing the widget \u2014 open this page as a Grist custom widget to connect real data.";
     tb.appendChild(badge);
   }
+
+  const sw = el("div", "searchwrap");
+  const si = document.createElement("input");
+  si.type = "text"; si.id = "calSearch"; si.className = "searchinput";
+  si.placeholder = "Search cases, titles, notes\u2026 (Enter to jump)";
+  si.value = state.search;
+  si.oninput = () => { state.search = si.value; state.searchCycleIndex = null; renderKeepFocus(); };
+  si.onkeydown = (e) => {
+    if (e.key === "Enter") { e.preventDefault(); cycleSearchMatch(e.shiftKey ? -1 : 1); }
+  };
+  sw.appendChild(si);
+  if (searchActive()) {
+    const datedMatches = searchMatchesChrono();
+    const undatedMatches = state.unplaced.filter(r => isVisible(r) && matchesSearch(r));
+    const totalMatches = datedMatches.length + undatedMatches.length;
+    const countLabel = (typeof state.searchCycleIndex === "number" && datedMatches.length)
+      ? "Match " + (state.searchCycleIndex + 1) + " of " + datedMatches.length
+      : totalMatches + " match" + (totalMatches === 1 ? "" : "es");
+    sw.appendChild(Object.assign(el("span", "search-count"), { textContent: countLabel }));
+    if (datedMatches.length > 1) {
+      const prevB = el("button", "searchnav"); prevB.innerHTML = "&#8249;"; prevB.title = "Previous match (Shift+Enter)";
+      prevB.onclick = (e) => { e.stopPropagation(); cycleSearchMatch(-1); };
+      const nextB = el("button", "searchnav"); nextB.innerHTML = "&#8250;"; nextB.title = "Next match (Enter)";
+      nextB.onclick = (e) => { e.stopPropagation(); cycleSearchMatch(1); };
+      sw.append(prevB, nextB);
+    }
+    const x = el("button", "searchclear"); x.textContent = "\u2715"; x.title = "Clear search";
+    x.onclick = () => { state.search = ""; state.searchCycleIndex = null; render(); };
+    sw.appendChild(x);
+  }
+  tb.appendChild(sw);
 
   tb.appendChild(el("div", "spacer"));
 
@@ -1099,6 +1309,23 @@ function settingsDropdown() {
       (checked) => { state.showOutsideDeadlines = checked; persist(); render(); }
     ));
 
+    list.appendChild(settingsToggleRow(
+      "Search hides non-matches",
+      "When searching, hide deadlines that don't match instead of just moving them lower in the list.",
+      state.searchFiltersOut,
+      (checked) => { state.searchFiltersOut = checked; persist(); render(); }
+    ));
+
+    if (state.mapped.assignedTo) {
+      list.appendChild(settingsSelectRow(
+        "Color deadlines by",
+        "\u201cCategory\u201d is the current behavior. \u201cAssigned person\u201d colors each deadline by who's on it \u2014 using that person's color from the Deadlines tab if you've set one there, split into equal bands for deadlines with more than one person. (Completed and critical deadlines still show green/red either way.)",
+        [["category", "Category"], ["assignee", "Assigned person"]],
+        state.taskColorMode,
+        (v) => { state.taskColorMode = v; persist(); render(); }
+      ));
+    }
+
     if (state.mapped.caseRef) {
       list.appendChild(settingsToggleRow(
         "Highlight related deadlines",
@@ -1137,8 +1364,9 @@ function rowEl(r, compact) {
   const editingCat = state.editingCatRow === r.id;
   const editingPri = state.editingPriRow === r.id;
   const related = caseHighlightOn() && r.caseLabel && r.caseLabel === state.highlightCase;
-  const row = el("div", "row " + kind + (compact ? " compactrow" : "") + (expanded ? " expanded" : "") + (related ? " case-highlight" : ""));
-  row.style.borderLeftColor = stripeColor(r, kind);
+  const matched = searchActive() && matchesSearch(r);
+  const row = el("div", "row " + visualKind(kind) + (compact ? " compactrow" : "") + (expanded ? " expanded" : "") + (related ? " case-highlight" : "") + (matched ? " search-match" : ""));
+  applyTaskColor(row, r, kind);
   if (caseHighlightOn() && r.caseLabel) row.dataset.case = r.caseLabel;
   makeDraggable(row, r);
 
@@ -1541,6 +1769,10 @@ function agendaBand(r) {
   return 1;                        // everything else upcoming
 }
 function agendaCompare(a, b) {
+  if (searchActive()) {
+    const ma = matchesSearch(a) ? 1 : 0, mb = matchesSearch(b) ? 1 : 0;
+    if (ma !== mb) return mb - ma;                                   // a search match always outranks a non-match
+  }
   const ba = agendaBand(a), bb = agendaBand(b);
   if (ba !== bb) return bb - ba;                                   // band dominates
   const pa = (state.mapped.priority && isImportant(a.priority)) ? 1 : 0;
@@ -1566,23 +1798,47 @@ function renderAgenda() {
     return wrap;
   }
 
-  let lastBand = null;
-  pending.forEach(r => {
-    const band = agendaBand(r);
-    if (band !== lastBand) {
-      const hd = el("div", "agenda-band agenda-band-" + band);
-      hd.textContent = AGENDA_BANDS[band] + " \u00b7 " + pending.filter(x => agendaBand(x) === band).length;
-      wrap.appendChild(hd);
-      lastBand = band;
+  const renderBandGroups = (list) => {
+    let lastBand = null;
+    list.forEach(r => {
+      const band = agendaBand(r);
+      if (band !== lastBand) {
+        const hd = el("div", "agenda-band agenda-band-" + band);
+        hd.textContent = AGENDA_BANDS[band] + " \u00b7 " + list.filter(x => agendaBand(x) === band).length;
+        wrap.appendChild(hd);
+        lastBand = band;
+      }
+      wrap.appendChild(rowEl(r, false));
+    });
+  };
+
+  if (searchActive()) {
+    // Matches are already sorted first (agendaCompare), so split cleanly into
+    // a promoted "matches" section and an "everything else" section, rather
+    // than letting band headers repeat once for matches and again for the rest.
+    const matches = pending.filter(matchesSearch);
+    const rest = pending.filter(r => !matchesSearch(r));
+    if (matches.length) {
+      wrap.appendChild(Object.assign(el("div", "agenda-search-hd"),
+        { textContent: "\uD83D\uDD0D Matching \u201c" + state.search.trim() + "\u201d \u00b7 " + matches.length }));
+      renderBandGroups(matches);
     }
-    wrap.appendChild(rowEl(r, false));
-  });
+    if (rest.length) {
+      wrap.appendChild(Object.assign(el("div", "agenda-search-hd agenda-search-hd-rest"), { textContent: "Other pending deadlines" }));
+      renderBandGroups(rest);
+    }
+  } else {
+    renderBandGroups(pending);
+  }
 
   if (undated.length) {
+    const sortedUndated = searchActive()
+      ? undated.slice().sort((a, b) => (matchesSearch(b) ? 1 : 0) - (matchesSearch(a) ? 1 : 0))
+      : undated;
     const hd = el("div", "agenda-band agenda-band-0");
     hd.textContent = "No date \u00b7 " + undated.length;
     wrap.appendChild(hd);
-    undated.forEach(u => wrap.appendChild(unplacedItem(u)));
+    sortedUndated.forEach(u => wrap.appendChild(unplacedItem(u)));
   }
   return wrap;
 }
@@ -1616,8 +1872,9 @@ function renderMonth() {
     shown.forEach(r => {
       const kind = classify(r);
       const related = caseHighlightOn() && r.caseLabel && r.caseLabel === state.highlightCase;
-      const chip = el("div", "chip" + (kind !== "normal" ? " chip-" + kind : "") + (related ? " case-highlight" : ""));
-      chip.style.borderLeftColor = stripeColor(r, kind);
+      const matched = searchActive() && matchesSearch(r);
+      const chip = el("div", "chip" + (visualKind(kind) !== "normal" ? " chip-" + visualKind(kind) : "") + (related ? " case-highlight" : "") + (matched ? " search-match" : ""));
+      applyTaskColor(chip, r, kind);
       if (caseHighlightOn() && r.caseLabel) { chip.dataset.case = r.caseLabel; chip.title = r.caseLabel; }
       const tt = r.due.timeStr ? '<span class="t">' + esc(r.due.timeStr) + "</span>" : "";
       const pre = kind === "complete" ? "\u2713 " : "";
@@ -1633,7 +1890,12 @@ function renderMonth() {
       makeDraggable(chip, r);
       cell.appendChild(chip);
     });
-    if (recs.length > shown.length) cell.appendChild(Object.assign(el("div", "more"), { textContent: "+" + (recs.length - shown.length) + " more" }));
+    if (recs.length > shown.length) {
+      const hiddenMatches = searchActive() ? recs.slice(shown.length).filter(matchesSearch).length : 0;
+      const moreEl = el("div", "more" + (hiddenMatches ? " more-has-match" : ""));
+      moreEl.textContent = "+" + (recs.length - shown.length) + " more" + (hiddenMatches ? " (" + hiddenMatches + " match" + (hiddenMatches === 1 ? "" : "es") + ")" : "");
+      cell.appendChild(moreEl);
+    }
 
     cell.onclick = () => { state.selectedKey = key; state.focus = stripTime(d); render(); };
     makeDropTarget(cell, d);
@@ -2050,11 +2312,36 @@ async function detectColumnTypes() {
       }
       return null;
     };
+    const rowIndexOf = (colId) => {
+      if (!colId) return -1;
+      for (let i = 0; i < cols.id.length; i++) {
+        if (cols.colId[i] === colId && (ref === null || cols.parentId[i] === ref)) return i;
+      }
+      return -1;
+    };
     const isList = (t) => t.indexOf("ChoiceList") === 0 || t.indexOf("RefList") === 0;
     const dt = typeOf(state.cols.DueDate);
     if (dt !== null) { state.dueTypeFromMeta = dt.indexOf("DateTime") === 0; state.dueIsDateTime = state.dueTypeFromMeta; }
     const at = typeOf(state.cols.AssignedTo);
     if (at !== null) { state.asgMulti = isList(at); state.asgTypeKnown = true; }
+    // Pick up per-person colors from Grist's own Choice/ChoiceList column
+    // config, if the person has configured them there ("the color of that
+    // person's name in the Deadlines tab"). No config found -> falls back
+    // to personColor()'s deterministic palette at render time.
+    const asgIdx = rowIndexOf(state.cols.AssignedTo);
+    if (asgIdx >= 0 && cols.widgetOptions) {
+      try {
+        const opts = JSON.parse(cols.widgetOptions[asgIdx] || "{}");
+        if (opts && opts.choiceOptions) {
+          const map = {};
+          Object.keys(opts.choiceOptions).forEach(name => {
+            const co = opts.choiceOptions[name];
+            if (co && co.fillColor) map[name] = co.fillColor;
+          });
+          state.assigneeColors = map;
+        }
+      } catch (e) { /* leave assigneeColors empty -> fallback palette used */ }
+    }
     const cst = typeOf(state.cols.Case);
     if (cst !== null) {
       state.caseIsRef = (cst.indexOf("Ref") === 0);
@@ -2127,6 +2414,8 @@ function persist() {
       hideWeekends: state.hideWeekends,
       maxChipsPerDay: state.maxChipsPerDay,
       timeFormat: state.timeFormat,
+      searchFiltersOut: state.searchFiltersOut,
+      taskColorMode: state.taskColorMode,
     });
   } catch (e) {}
 }
@@ -2277,6 +2566,8 @@ if (state.haveGrist) {
     if (typeof opts.hideWeekends === "boolean") state.hideWeekends = opts.hideWeekends;
     if (typeof opts.maxChipsPerDay === "number" && opts.maxChipsPerDay >= 1) state.maxChipsPerDay = opts.maxChipsPerDay;
     if (opts.timeFormat === "12h" || opts.timeFormat === "24h") state.timeFormat = opts.timeFormat;
+    if (typeof opts.searchFiltersOut === "boolean") state.searchFiltersOut = opts.searchFiltersOut;
+    if (opts.taskColorMode === "category" || opts.taskColorMode === "assignee") state.taskColorMode = opts.taskColorMode;
     render();
   });
 
