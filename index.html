@@ -519,7 +519,14 @@
 //       background. Single-assignee chips/rows are now fully highlighted
 //       too, using the same lightened tone as one band of the multi-person
 //       gradient, so every assigned deadline reads consistently.
-const WIDGET_VERSION = "4.0";
+// 4.1 — Fixed "New deadline" not offering a way to set the Case: if none of
+//       the currently-loaded deadlines had a Case set yet, the modal showed
+//       only a passive note and NO input at all. It now always shows a
+//       usable Case field — you can type any case name even with an empty
+//       list, and it writes correctly for both Reference and Choice/Text
+//       Case columns (creating an unlinked-but-saved deadline, with a note,
+//       if it's a brand-new case on a true Reference column).
+const WIDGET_VERSION = "4.1";
 
 /* ===================== State ===================== */
 const today = new Date();
@@ -1991,12 +1998,13 @@ function openNewTask(prefillKey) {
   if (state.mapped.caseRef) {
     modal.appendChild(labelEl("Case"));
     const cases = Object.keys(state.caseRegistry).sort((a, b) => a.localeCompare(b));
-    if (cases.length) {
-      caseIn = datalistInput(cases, "nt-case");
-      modal.appendChild(caseIn.wrap);
-    } else {
+    caseIn = datalistInput(cases, "nt-case");
+    modal.appendChild(caseIn.wrap);
+    if (!cases.length) {
       const note = el("div", "muted"); note.style.cssText = "font-size:12px;color:var(--ink-soft);margin:2px 0 6px;";
-      note.textContent = "No cases found yet \u2014 add one to a deadline in Grist first, then it will appear here.";
+      note.textContent = state.caseIsRef
+        ? "No cases found on existing deadlines yet. You can still type a case name \u2014 if it doesn't match one already in your case list, the deadline will be created without a case link, and you can set it in Grist afterward."
+        : "No cases found on existing deadlines yet \u2014 type any case name to use it.";
       modal.appendChild(note);
     }
   }
